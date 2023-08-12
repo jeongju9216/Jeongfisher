@@ -1,6 +1,6 @@
 //
-//  Cacheable.swift
-//  CloneStore
+//  JFCacheable.swift
+//  Jeongfisher
 //
 //  Created by jeongju.yu on 2023/02/15.
 //
@@ -8,16 +8,16 @@
 import Foundation
 
 //캐싱 동작 프로토콜
-public protocol JeongCacheable {
+public protocol JFCacheable {
     associatedtype Key: Hashable//캐시 키
-    associatedtype Value: JeongCacheItemable //캐싱할 데이터 타입
+    associatedtype Value: JFCacheItemable //캐싱할 데이터 타입
     
     func saveCache(key: Key, data: Value, overwrite: Bool) throws //캐시에 저장
     func getData(key: Key) -> Value?
 }
 
 //캐시되는 아이템이 가져야할 프로퍼티
-public protocol JeongCacheItemable: Codable {
+public protocol JFCacheItemable: Codable {
     associatedtype T
     
     var priority: Int { get } //우선순위(직접 할당할 때만 Int값, 기본 0)

@@ -1,6 +1,6 @@
 //
 //  UIImageView+JF.swift
-//  JICExample
+//  Jeongfisher
 //
 //  Created by 유정주 on 2023/08/11.
 //
@@ -40,7 +40,7 @@ extension JeongfisherWrapper where Base: UIImageView {
                 hidePlaceHolder(imageView: placeHolderImageView)
             }
             
-            JeongImageCache.shared.getImageWithCache(url: url.absoluteString, usingETag: false) { jeongImageData in
+            JFImageCache.shared.getImageWithCache(url: url.absoluteString, usingETag: false) { jeongImageData in
                 guard let jeongImageData = jeongImageData else {
                     self.base.image = nil
                     return
@@ -59,7 +59,7 @@ extension JeongfisherWrapper where Base: UIImageView {
     ///- Parameters:
     ///     - url: 이미지 URL
     public func cancelDownloadImage(url: String) {
-        JeongImageDownloader.shared.cancelDownloadImage(url: url)
+        JFImageDownloader.shared.cancelDownloadImage(url: url)
     }
     
     private func showPlaceHolder(image: UIImage) -> UIImageView {

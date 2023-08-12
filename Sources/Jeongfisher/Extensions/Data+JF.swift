@@ -1,6 +1,6 @@
 //
-//  Data.swift
-//  JeongImageCache
+//  Data+JF.swift
+//  Jeongfisher
 //
 //  Created by jeongju.yu on 2023/02/15.
 //

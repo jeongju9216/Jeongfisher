@@ -1,6 +1,6 @@
 //
-//  JeongDiskCache.swift
-//  JeongImageCache
+//  JFDiskCache.swift
+//  Jeongfisher
 //
 //  Created by jeongju.yu on 2023/02/15.
 //
@@ -17,7 +17,7 @@ import UIKit
     - 인코딩해서 저장하고, 디코딩해서 불러오고
  */
 
-open class JeongDiskCache<Item: JeongCacheItemable>: JeongCacheable {
+open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
     public typealias Key = String
     public typealias Value = Item
     

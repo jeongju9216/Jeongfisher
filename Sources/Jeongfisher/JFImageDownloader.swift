@@ -1,6 +1,6 @@
 //
-//  JeongImageDownloader.swift
-//  JeongImageCache
+//  JFImageDownloader.swift
+//  Jeongfisher
 //
 //  Created by jeongju.yu on 2023/02/14.
 //
@@ -16,8 +16,8 @@ public enum JeongNetworkError: Error {
 
 //이미지 다운로드 클래스
 //킹피셔대타에서 캐시에 없을 때 ImageDownloader 이용해서 네트워크로 이미지 요청
-public final class JeongImageDownloader: JeongImageDownloadable {
-    public static let shared: JeongImageDownloader = JeongImageDownloader()
+public final class JFImageDownloader: JFImageDownloadable {
+    public static let shared: JFImageDownloader = JFImageDownloader()
     
     private init() { }
     
@@ -29,7 +29,7 @@ public final class JeongImageDownloader: JeongImageDownloadable {
     private var reqeusetSerialQueue = DispatchQueue(label: "com.jeongfisher.reqeusetQueue", attributes: .concurrent)
     
     //이미지 다운로드
-    public func downloadImage(url urlString: String, eTag: String? = nil, completionHandler: @escaping (Result<JeongImageData, Error>) -> Void) {
+    public func downloadImage(url urlString: String, eTag: String? = nil, completionHandler: @escaping (Result<JFImageData, Error>) -> Void) {
         guard let url = URL(string: urlString) else {
             completionHandler(.failure(JeongNetworkError.urlError))
             return
@@ -61,14 +61,11 @@ public final class JeongImageDownloader: JeongImageDownloadable {
                 completionHandler(.failure(JeongNetworkError.imageDownloadError))
                 return
             }
-            
-            JICLogger.log("[JIC] statusCode: \(httpURLResponse.statusCode) / data: \(data.count)")
-            
+  
             let eTag: String = httpURLResponse.allHeaderFields["Etag"] as? String ?? ""
-//                let eTag: String = "Update Test Etag"
-            let imageFormat: JeongImageFormat = urlString.getJeongImageFormatFromURLString()
+            let imageFormat: JFImageFormat = urlString.getJFImageFormatFromURLString()
 
-            let imageData = JeongImageData(data: data, eTag: eTag, imageExtension: imageFormat)
+            let imageData = JFImageData(data: data, eTag: eTag, imageExtension: imageFormat)
                             
             self.removeDictionaryValue(url: urlString)
             completionHandler(.success(imageData))
@@ -81,7 +78,6 @@ public final class JeongImageDownloader: JeongImageDownloadable {
     public func cancelDownloadImage(url: String) {
         reqeusetSerialQueue.sync {
             if self.requestDir[url] != nil {
-                JICLogger.error("[ImageDownloader] Cancel URL: \(url)")
                 self.requestDir[url]?.cancel()
                 removeDictionaryValue(url: url)
             }
