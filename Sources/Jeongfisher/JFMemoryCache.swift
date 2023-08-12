@@ -1,6 +1,6 @@
 //
-//  JeongMemoryCache.swift
-//  JeongImageCache
+//  JFMemoryCache.swift
+//  Jeongfisher
 //
 //  Created by jeongju.yu on 2023/02/15.
 //
@@ -10,16 +10,16 @@ import UIKit
 ///캐시 정책
 ///- LRU: 오래 사용하지 않은 데이터 삭제
 ///- LFU: 적게 사용한 데이터 삭제
-public enum JeongCachePolicy {
+public enum JFCachePolicy {
     ///오래 사용하지 않은 데이터 삭제
     case LRU
     ///적게 사용한 데이터 삭제
     case LFU
-    case Custom(compareRule: ((_ oldItem: any JeongCacheItemable, _ newItem: any JeongCacheItemable) -> Bool))
+    case Custom(compareRule: ((_ oldItem: any JFCacheItemable, _ newItem: any JFCacheItemable) -> Bool))
 }
 
 ///메모리 캐싱을 담당하는 클래스
-open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
+open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     public typealias Key = String
     public typealias Value = Item
     
@@ -41,14 +41,14 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
     private(set) var currentCachedCost: Int64 = 0 //capacity 이상이 되면 정책에 따라 캐시 정리
     private(set) var capacity: JeongDataSize //메모리캐시 최대 용량
     private(set) var cacheDataSizeLimit: JeongDataSize //메모리캐시에 저장할 수 있는 데이터 최대 사이즈
-    private(set) var cachePolicy: JeongCachePolicy //중간에 바꾸지 못함
+    private(set) var cachePolicy: JFCachePolicy //중간에 바꾸지 못함
     
     private var isLocking: Bool = false //연속 lock 방지
     private let lock = NSLock()
     
     public init(capacity: JeongDataSize = .MB(10),
                 cacheDataSizeLimit: JeongDataSize = .KB(200),
-                cachePolicy: JeongCachePolicy = .LRU) {
+                cachePolicy: JFCachePolicy = .LRU) {
         self.capacity = capacity
         self.cacheDataSizeLimit = cacheDataSizeLimit
         self.cachePolicy = cachePolicy
@@ -70,13 +70,10 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
             unlockThread()
         }
         
-        if !isLocking {
-            lockThread()
-        }
+        lockThread()
         
         //아이템이 없으면 nil 반환
         guard let cacheNode = cache[key] else {
-            unlockThread()
             return nil
         }
 
@@ -87,7 +84,6 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
         let hitNode = hit(node: cacheNode)
         addNode(hitNode)
         
-        unlockThread()
         return hitNode.value
     }
     
@@ -101,17 +97,15 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
         defer {
             unlockThread()
         }
+        
+        lockThread()
+
         JICLogger.log("[Memory Cache] Capacity: \(capacity.byte) / current: \(currentCachedCost) / size limit: \(cacheDataSizeLimit.byte) / data size: \(data.size.byte)")
         if head == nil && tail == nil {
             initHeadTail(item: data)
         }
-        
-        if !isLocking {
-            lockThread()
-        }
-        
+                
         if cache[key] != nil && !overwrite {
-            unlockThread()
             throw JeongCacheError.saveError
         }
         
@@ -143,7 +137,6 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
             addNode(newNode)
             cache[key] = newNode
         }
-        unlockThread()
         
         //Cost 추가
         currentCachedCost += data.size.byte
@@ -156,9 +149,7 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
             unlockThread()
         }
         
-        if !isLocking {
-            lockThread()
-        }
+        lockThread()
         
         guard let cacheNode = cache[key] else {
             unlockThread()
@@ -315,21 +306,12 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
     }
 }
 
-extension JeongMemoryCache {
+extension JFMemoryCache {
     private func lockThread() {
-        while isLocking {
-            usleep(10) //0.00001초 //busy waiting일 때 CPU 부담 줄임
-            JICLogger.log("[Memory Cache] Locking")
-        }
-        
-        if !isLocking {
-            isLocking = true
-            lock.lock()
-        }
+        lock.lock()
     }
     
     private func unlockThread() {
         lock.unlock()
-        isLocking = false
     }
 }

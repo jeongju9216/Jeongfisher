@@ -1,6 +1,6 @@
 //
-//  JeongCacheItem.swift
-//  JeongImageCache
+//  JFCacheItem.swift
+//  Jeongfisher
 //
 //  Created by jeongju.yu on 2023/02/15.
 //
@@ -8,7 +8,7 @@
 import Foundation
 
 /// Jeong Cache에서 사용되는 CacheItem
-public struct JeongCacheItem<T: Codable>: JeongCacheItemable {
+public struct JFCacheItem<T: Codable>: JFCacheItemable {
     public var priority: Int //우선순위(직접 설정할 때만 설정)
     ///캐시 아이템 사이즈
     public var size: JeongDataSize //원본 이미지 사이즈(화면에 표시되는 사이즈 X)
