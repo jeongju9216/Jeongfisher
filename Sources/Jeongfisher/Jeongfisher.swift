@@ -18,14 +18,14 @@ public struct JeongfisherWrapper<Base> {
     }
 }
 
-public protocol QueenfisherCompatible: AnyObject {}
+public protocol JeongfisherCompatible: AnyObject {}
 
-extension QueenfisherCompatible {
+extension JeongfisherCompatible {
     public var jf: JeongfisherWrapper<Self> {
         return JeongfisherWrapper(base: self)
     }
 }
 
 // MARK: - Conforms Queenfisher Compatible
-extension UIImage: QueenfisherCompatible {}
-extension UIImageView: QueenfisherCompatible {}
+extension UIImage: JeongfisherCompatible {}
+extension UIImageView: JeongfisherCompatible {}
