@@ -8,7 +8,7 @@
 import UIKit
 import Combine
 
-extension UIImageView {
+extension JeongfisherWrapper where Base: UIImageView {
     
     ///url을 이용해 UIImage 설정
     ///
@@ -17,30 +17,28 @@ extension UIImageView {
     ///     - placeHolder: 이미지 다운로드 지연 시 보여줄 placeHolder
     ///     - watiPlaceHolderTime: placeHolde를 보여주기까지의 대기 시간
     ///     - useCache: 캐시 사용 여부 결정. false면 네트워크를 통해 이미지 다운로드
-    public func setImageUsingJIC(url: String,
+    public func setImage(url: String,
                           placeHolder: UIImage? = nil,
                           waitPlaceHolderTime: TimeInterval = 1,
                           useCache: Bool = true) {
-        var placeHolderImageView: UIImageView?
-        var placeHolderTimer: Cancellable?
-        
-        if let placeHolder = placeHolder {
-            placeHolderTimer = Timer.publish(every: waitPlaceHolderTime, on: .main, in: .default)
-                .autoconnect()
-                .first()
-                .sink { [weak self] _ in
-                    guard let self = self else { return }
-                    
-                    JICLogger.log("Show PlaceHolder Timer")
-                    placeHolderImageView = self.showPlaceHolder(image: placeHolder)
-                }
-        }
         
         Task {
+            var placeHolderImageView: UIImageView?
+            var placeHolderTimer: Cancellable?
+            
+            if let placeHolder = placeHolder {
+                placeHolderTimer = Timer.publish(every: waitPlaceHolderTime, on: .main, in: .default)
+                    .autoconnect()
+                    .first()
+                    .sink { _ in
+                        placeHolderImageView = self.showPlaceHolder(image: placeHolder)
+                    }
+            }
+        
             let startTime = CFAbsoluteTimeGetCurrent()
             
             let imageData: JeongImageData? = useCache ? await JeongImageCache.shared.getImageWithCache(url: url)
-                                                 : await JeongImageCache.shared.getImageFromNetwork(url: url)
+                                                      : await JeongImageCache.shared.getImageFromNetwork(url: url)
             
             if placeHolder != nil {
                 placeHolderTimer?.cancel()
@@ -48,13 +46,22 @@ extension UIImageView {
             }
             
             if let imageData = imageData, let image = imageData.data.convertToImage() {
-                self.image = JeongImageProcessor.shared.resizedImage(image, newSize: self.frame.size)
+                let ratio: CGFloat = await max(self.base.frame.width, self.base.frame.height) / min(self.base.frame.width, self.base.frame.height)
+                let image = JeongImageProcessor.shared.resizedImage(image, scale: ratio)
+
+                updateImage(image)
             } else {
-                self.image = nil
+                updateImage(nil)
             }
             
             let endTime = CFAbsoluteTimeGetCurrent() - startTime
             JICLogger.log("[Time] setImageUsingJIC: \(endTime)")
+        }
+    }
+    
+    private func updateImage(_ image: UIImage?) {
+        DispatchQueue.main.async {
+            self.base.image = image
         }
     }
     
@@ -70,11 +77,11 @@ extension UIImageView {
         let placeHolderImageView = UIImageView(image: image)
         placeHolderImageView.contentMode = .scaleAspectFit
         
-        self.addSubview(placeHolderImageView)
+        self.base.addSubview(placeHolderImageView)
         placeHolderImageView.translatesAutoresizingMaskIntoConstraints = false
 
-        placeHolderImageView.centerXAnchor.constraint(equalTo: self.centerXAnchor).isActive = true
-        placeHolderImageView.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
+        placeHolderImageView.centerXAnchor.constraint(equalTo: self.base.centerXAnchor).isActive = true
+        placeHolderImageView.centerYAnchor.constraint(equalTo: self.base.centerYAnchor).isActive = true
         
         return placeHolderImageView
     }
@@ -82,4 +89,5 @@ extension UIImageView {
     private func hidePlaceHolder(imageView: UIImageView?) {
         imageView?.removeFromSuperview()
     }
+    
 }
