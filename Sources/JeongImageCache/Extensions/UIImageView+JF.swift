@@ -1,8 +1,8 @@
 //
-//  UIImageView.swift
-//  JeongImageCache
+//  UIImageView+JF.swift
+//  JICExample
 //
-//  Created by jeongju.yu on 2023/02/20.
+//  Created by 유정주 on 2023/08/11.
 //
 
 import UIKit
@@ -17,12 +17,12 @@ extension JeongfisherWrapper where Base: UIImageView {
     ///     - placeHolder: 이미지 다운로드 지연 시 보여줄 placeHolder
     ///     - watiPlaceHolderTime: placeHolde를 보여주기까지의 대기 시간
     ///     - useCache: 캐시 사용 여부 결정. false면 네트워크를 통해 이미지 다운로드
-    public func setImage(url: String,
+    public func setImage(with url: URL,
                           placeHolder: UIImage? = nil,
                           waitPlaceHolderTime: TimeInterval = 1,
-                          useCache: Bool = true) {
+                         useCache: Bool = true) {
         
-        Task {
+        DispatchQueue.global().async {
             var placeHolderImageView: UIImageView?
             var placeHolderTimer: Cancellable?
             
@@ -34,34 +34,23 @@ extension JeongfisherWrapper where Base: UIImageView {
                         placeHolderImageView = self.showPlaceHolder(image: placeHolder)
                     }
             }
-        
-            let startTime = CFAbsoluteTimeGetCurrent()
-            
-            let imageData: JeongImageData? = useCache ? await JeongImageCache.shared.getImageWithCache(url: url)
-                                                      : await JeongImageCache.shared.getImageFromNetwork(url: url)
-            
+                        
             if placeHolder != nil {
                 placeHolderTimer?.cancel()
                 hidePlaceHolder(imageView: placeHolderImageView)
             }
             
-            if let imageData = imageData, let image = imageData.data.convertToImage() {
-                let ratio: CGFloat = await max(self.base.frame.width, self.base.frame.height) / min(self.base.frame.width, self.base.frame.height)
-                let image = JeongImageProcessor.shared.resizedImage(image, scale: ratio)
-
-                updateImage(image)
-            } else {
-                updateImage(nil)
+            JeongImageCache.shared.getImageWithCache(url: url.absoluteString, usingETag: false) { jeongImageData in
+                guard let jeongImageData = jeongImageData else {
+                    self.base.image = nil
+                    return
+                }
+                
+                DispatchQueue.main.async {
+                    let downsamplingImage = jeongImageData.data.downsampling(to: self.base.frame.size)
+                    self.base.image = downsamplingImage
+                }
             }
-            
-            let endTime = CFAbsoluteTimeGetCurrent() - startTime
-            JICLogger.log("[Time] setImageUsingJIC: \(endTime)")
-        }
-    }
-    
-    private func updateImage(_ image: UIImage?) {
-        DispatchQueue.main.async {
-            self.base.image = image
         }
     }
     
@@ -69,7 +58,7 @@ extension JeongfisherWrapper where Base: UIImageView {
     ///
     ///- Parameters:
     ///     - url: 이미지 URL
-    public func cacnelDownloadImageWithJIC(url: String) {
+    public func cancelDownloadImage(url: String) {
         JeongImageDownloader.shared.cancelDownloadImage(url: url)
     }
     

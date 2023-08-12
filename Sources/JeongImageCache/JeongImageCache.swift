@@ -30,9 +30,9 @@ public class JeongImageCache {
     public static let shared: JeongImageCache = JeongImageCache()
     
     private init() {
-        Task {
-            startCleanCacheTimer()
-        }
+//        Task {
+//            startCleanCacheTimer()
+//        }
     }
     
     public enum CacheType {
@@ -42,8 +42,8 @@ public class JeongImageCache {
     public typealias ImageCacheItem = JeongCacheItem<JeongImageData>
     
     //메모리 캐시 : 딕셔너리, 양방향 링크드 리스트를 이용한 메모리 캐시
-    private var memoryCache: JeongMemoryCache<ImageCacheItem> = JeongMemoryCache(capacity: .MB(1),
-                                                                       cacheDataSizeLimit: .KB(100),
+    private var memoryCache: JeongMemoryCache<ImageCacheItem> = JeongMemoryCache(capacity: .MB(100),
+                                                                       cacheDataSizeLimit: .MB(1),
                                                                        cachePolicy: .LRU)
     //메모리 캐시 만료 시간
     private(set) var memoryCacheItemExpiredTime: JeongCacheExpiration = .minutes(10)
@@ -53,9 +53,9 @@ public class JeongImageCache {
     private(set) var cleanMemoryCacheExpiredTime: JeongCacheExpiration = .minutes(5)
     
     //디스크 캐시 : FileManager를 이용한 디스크 캐시
-    private var diskCache: JeongDiskCache<ImageCacheItem> = JeongDiskCache(capacity: .MB(100),
+    private var diskCache: JeongDiskCache<ImageCacheItem> = JeongDiskCache(capacity: .GB(1),
                                                                  cacheDataSizeLimit: .MB(10),
-                                                                 cacheFolderName: "CloneStore")
+                                                                 cacheFolderName: "JeongfisherCache")
     //디스크 캐시 만료 시간
     private(set) var diskCacheItemExpiredTime: JeongCacheExpiration = .days(7)
     //디스크 캐시 만료 시간 측정 기준
@@ -70,11 +70,12 @@ public class JeongImageCache {
     ///     - url: 이미지 URL
     ///     - usingETag: ETag 사용 여부
     ///- Returns: 캐시 혹은 네트워크를 통해 생성한 JeongImageData
-    public func getImageWithCache(url: String, usingETag: Bool = true) async -> JeongImageData? {
+    public func getImageWithCache(url: String, usingETag: Bool = true, completionHandler: @escaping (JeongImageData?) -> Void) {
         //메모리 캐시: 만료되었더라도 아직 정리되지 않았다면 다시 살림
         if let memoryCacheData = memoryCache.getData(key: url) {
             JICLogger.log("[ImageCache] Get Memory Cache")
-            return memoryCacheData.data
+            completionHandler(memoryCacheData.data)
+            return
         }
         
         //디스크 캐시: 만료된 데이터는 사용하지 않음
@@ -82,30 +83,47 @@ public class JeongImageCache {
             if usingETag {
                 let diskDataETag: String = diskCacheData.data.eTag
                 //eTag 확인
-                if let networkImageData = await getImageFromNetwork(url: url, eTag: diskDataETag) {
+                getImageFromNetwork(url: url, eTag: diskDataETag) { [weak self] jeongImageData in
+                    guard let self = self,
+                          let networkImageData = jeongImageData else {
+                        completionHandler(nil)
+                        return
+                    }
+                    
                     let serverEtag = networkImageData.eTag
                     if !serverEtag.isEmpty && serverEtag != diskDataETag {
                         //다르면 디스크 캐시에 새로운 데이터 저장
                         JICLogger.log("[ImageCache] Get Disk Cache - Update New Data")
                         
                         diskCacheData.data = networkImageData
-                        saveDiskCache(key: url, data: diskCacheData.data)
+                        self.saveDiskCache(key: url, data: diskCacheData.data)
                     } else {
                         JICLogger.log("[ImageCache] Get Disk Cache - Same Data")
                     }
+                    
+                    self.saveMemoryCache(key: url, data: diskCacheData.data)
+                    completionHandler(diskCacheData.data)
+                    return
                 }
+            } else {
+                saveMemoryCache(key: url, data: diskCacheData.data)
+                completionHandler(diskCacheData.data)
+                return
             }
-            
-            saveMemoryCache(key: url, data: diskCacheData.data)
-            return diskCacheData.data
         }
         
         JICLogger.log("[ImageCache] Get Network")
-        if let imageData = await getImageFromNetwork(url: url) {
-            saveImageData(url: url, imageData: imageData)
-            return imageData
-        } else {
-            return nil
+        
+        getImageFromNetwork(url: url) { [weak self] jeongImageData in
+            guard let self = self,
+                  let jeongImageData = jeongImageData else {
+                completionHandler(nil)
+                return
+            }
+            
+            self.saveImageData(url: url, imageData: jeongImageData)
+            completionHandler(jeongImageData)
+            return
         }
     }
     
@@ -113,18 +131,21 @@ public class JeongImageCache {
     ///- Parameters:
     ///     - url: 이미지 URL
     ///- Returns: 네트워크를 통해 생성한 JeongImageData
-    public func getImageFromNetwork(url: String, eTag: String? = nil) async -> JeongImageData? {
-        do {
-            //네트워크
-            let startTime = CFAbsoluteTimeGetCurrent()
-            let imageData: JeongImageData = try await JeongImageDownloader.shared.downloadImage(url: url, eTag: eTag)
+    public func getImageFromNetwork(url: String, eTag: String? = nil, completionHandler: @escaping (JeongImageData?) -> Void) {
+        print("\(#function): \(url)")
+        //네트워크
+        let startTime = CFAbsoluteTimeGetCurrent()
+        JeongImageDownloader.shared.downloadImage(url: url, eTag: eTag) { result in
             let endTime = CFAbsoluteTimeGetCurrent() - startTime
             JICLogger.log("[Time] request downloadImage: \(endTime)")
             
-            return imageData
-        } catch {
-            JICLogger.error("Get Network Cache Error: \(error.localizedDescription)")
-            return nil
+            switch result {
+            case .success(let jeongImageData):
+                completionHandler(jeongImageData)
+            case .failure(let error):
+                JICLogger.error("Get Network Cache Error: \(error.localizedDescription)")
+                completionHandler(nil)
+            }
         }
     }
     

@@ -70,13 +70,10 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
             unlockThread()
         }
         
-        if !isLocking {
-            lockThread()
-        }
+        lockThread()
         
         //아이템이 없으면 nil 반환
         guard let cacheNode = cache[key] else {
-            unlockThread()
             return nil
         }
 
@@ -87,7 +84,6 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
         let hitNode = hit(node: cacheNode)
         addNode(hitNode)
         
-        unlockThread()
         return hitNode.value
     }
     
@@ -101,17 +97,15 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
         defer {
             unlockThread()
         }
+        
+        lockThread()
+
         JICLogger.log("[Memory Cache] Capacity: \(capacity.byte) / current: \(currentCachedCost) / size limit: \(cacheDataSizeLimit.byte) / data size: \(data.size.byte)")
         if head == nil && tail == nil {
             initHeadTail(item: data)
         }
-        
-        if !isLocking {
-            lockThread()
-        }
-        
+                
         if cache[key] != nil && !overwrite {
-            unlockThread()
             throw JeongCacheError.saveError
         }
         
@@ -143,7 +137,6 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
             addNode(newNode)
             cache[key] = newNode
         }
-        unlockThread()
         
         //Cost 추가
         currentCachedCost += data.size.byte
@@ -156,9 +149,7 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
             unlockThread()
         }
         
-        if !isLocking {
-            lockThread()
-        }
+        lockThread()
         
         guard let cacheNode = cache[key] else {
             unlockThread()
@@ -317,19 +308,10 @@ open class JeongMemoryCache<Item: JeongCacheItemable>: JeongCacheable {
 
 extension JeongMemoryCache {
     private func lockThread() {
-        while isLocking {
-            usleep(10) //0.00001초 //busy waiting일 때 CPU 부담 줄임
-            JICLogger.log("[Memory Cache] Locking")
-        }
-        
-        if !isLocking {
-            isLocking = true
-            lock.lock()
-        }
+        lock.lock()
     }
     
     private func unlockThread() {
         lock.unlock()
-        isLocking = false
     }
 }
