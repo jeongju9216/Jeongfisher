@@ -10,6 +10,8 @@ import Combine
 
 extension JeongfisherWrapper where Base: UIImageView {
     
+    
+    
     ///url을 이용해 UIImage 설정
     ///
     ///- Parameters:
@@ -22,7 +24,7 @@ extension JeongfisherWrapper where Base: UIImageView {
                           waitPlaceHolderTime: TimeInterval = 1,
                          useCache: Bool = true) {
         
-        DispatchQueue.global().async {
+        Task {
             var placeHolderImageView: UIImageView?
             var placeHolderTimer: Cancellable?
             
@@ -40,17 +42,20 @@ extension JeongfisherWrapper where Base: UIImageView {
                 hidePlaceHolder(imageView: placeHolderImageView)
             }
             
-            JFImageCache.shared.getImageWithCache(url: url.absoluteString, usingETag: false) { jeongImageData in
-                guard let jeongImageData = jeongImageData else {
-                    self.base.image = nil
-                    return
-                }
-                
+            let jfImageData = await JFImageCache.shared.getImageWithCache(url: url.absoluteString, usingETag: false)
+            guard let jfImageData = jfImageData else {
                 DispatchQueue.main.async {
-                    let downsamplingImage = jeongImageData.data.downsampling(to: self.base.frame.size)
-                    self.base.image = downsamplingImage
+                    print("HERE!!!! image is nil")
+                    self.base.image = nil
                 }
+                return
             }
+
+            DispatchQueue.main.async {
+                let downsamplingImage = jfImageData.data.downsampling(to: self.base.frame.size)
+                self.base.image = downsamplingImage
+            }
+
         }
     }
     
@@ -59,7 +64,7 @@ extension JeongfisherWrapper where Base: UIImageView {
     ///- Parameters:
     ///     - url: 이미지 URL
     public func cancelDownloadImage(url: String) {
-        JFImageDownloader.shared.cancelDownloadImage(url: url)
+//        JFImageDownloader.shared.cancelDownloadImage(url: url)
     }
     
     private func showPlaceHolder(image: UIImage) -> UIImageView {
