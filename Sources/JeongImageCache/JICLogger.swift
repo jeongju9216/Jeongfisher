@@ -17,7 +17,7 @@ final class JICLogger {
             message = "[JIC]: object is nil)"
         }
         
-        os_log(level, "%@", message)
+//        os_log(level, "%@", message)
     }
     
     static func error<T>(_ object: T?, level: OSLogType = .error, fileName: String = #fileID, line: Int = #line, funcName: String = #function) {
