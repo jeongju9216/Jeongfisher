@@ -10,7 +10,7 @@ import Combine
 
 public struct JFImageData: Codable {
     public var data: Data //이미지 데이터
-    public var eTag: String
+    public var eTag: String?
     public var imageExtension: JFImageFormat //png, jpeg (UIImage <-> Data 변환, 압축에 사용)
 }
 
@@ -59,7 +59,7 @@ public class JFImageCache {
     private(set) var cleanDiskCacheExpiredTime: JFCacheExpiration = .days(7)
     
     private var cleanMemoryCacheCancellable: Cancellable?
-    
+        
     /// 캐시를 이용해 이미지 반환
     /// - Parameters:
     ///   - url: 이미지 URL
@@ -76,11 +76,12 @@ public class JFImageCache {
         
         //디스크 캐시: 만료된 데이터는 사용하지 않음
         if var diskCacheData = diskCache.getData(key: key) {
-            if usingETag {
-                let diskDataETag: String = diskCacheData.data.eTag
+            if usingETag,
+               let diskDataETag = diskCacheData.data.eTag {
+                
                 //eTag 확인
-                if let networkImageData = await downloadImage(url: url, eTag: diskDataETag) {
-                    let serverEtag = networkImageData.eTag
+                if let networkImageData = await downloadImage(url: url, eTag: diskDataETag),
+                   let serverEtag = networkImageData.eTag {
                     if !serverEtag.isEmpty && serverEtag != diskDataETag {
                         //다르면 디스크 캐시에 새로운 데이터 저장
                         JFLogger.log("[ImageCache] Get Disk Cache - Update New Data")
@@ -242,9 +243,7 @@ extension JFImageCache {
     }
     
     private func cleanExpiredMemoryCacheData() {
-        DispatchQueue.global().async { [weak self] in
-            self?.memoryCache.cleanExpiredData()
-        }
+        self.memoryCache.cleanExpiredData()
     }
 }
 
@@ -270,12 +269,10 @@ extension JFImageCache {
     }
     
     private func cleanExpiredDiskCacheData() {
-        DispatchQueue.global().async { [weak self] in
-            do {
-                try self?.diskCache.cleanExpiredData()
-            } catch {
-                JFLogger.error(error.localizedDescription)
-            }
+        do {
+            try self.diskCache.cleanExpiredData()
+        } catch {
+            JFLogger.error(error.localizedDescription)
         }
     }
 }
