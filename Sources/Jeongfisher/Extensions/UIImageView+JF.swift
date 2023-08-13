@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import Combine
 
 private struct JFAssociatedKeys {
     static var downloadUrl = "downloadUrl"
