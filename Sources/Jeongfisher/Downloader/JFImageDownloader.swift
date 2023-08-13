@@ -53,6 +53,10 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
     }
     
+    public func downloadImage(from url: URL, eTag: String? = nil) async throws -> UIImage? {
+        return try await downloadImage(from: url, eTag: eTag).data.convertToImage()
+    }
+    
     /// URL 이미지 다운로드
     /// - Parameters:
     ///   - url: 이미지 URL
