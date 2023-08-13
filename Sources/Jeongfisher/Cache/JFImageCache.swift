@@ -106,7 +106,7 @@ public class JFImageCache {
     ///   - url: 이미지 URL
     ///- Returns: 네트워크를 통해 생성한 JeongImageData
     public func downloadImage(url: URL, eTag: String? = nil) async -> JFImageData? {
-        let imageData = try? await JFImageDownloader.shared.downloadImage(from: url, eTag: eTag)
+        let imageData: JFImageData? = try? await JFImageDownloader.shared.downloadImage(from: url, eTag: eTag)
         if imageData != nil {
             JFImageCache.shared.saveImageData(url: url.absoluteString, imageData: imageData!)
         }
