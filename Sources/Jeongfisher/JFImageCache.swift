@@ -70,7 +70,7 @@ public class JFImageCache {
     ///     - url: 이미지 URL
     ///     - usingETag: ETag 사용 여부
     ///- Returns: 캐시 혹은 네트워크를 통해 생성한 JeongImageData
-    public func getImageWithCache(url: URL, usingETag: Bool = true) async -> JFImageData? {
+    public func getImageWithCache(url: URL, usingETag: Bool = false) async -> JFImageData? {
         let key = url.absoluteString
         
         //메모리 캐시: 만료되었더라도 아직 정리되지 않았다면 다시 살림
