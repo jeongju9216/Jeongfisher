@@ -1,4 +1,4 @@
-# JeongImageCache
+# Jeongfisher
 이미지 캐시를 지원하는 라이브러리입니다.  
 노션 페이지 : https://jeong9216.notion.site/CloneStore-JeongImageCache-91f1964617b84c5d8df7da17f1b1d9db  
 
