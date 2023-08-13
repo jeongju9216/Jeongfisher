@@ -25,37 +25,54 @@ extension JeongfisherWrapper where Base: UIImageView {
                          useCache: Bool = true) {
         
         Task {
-            var placeHolderImageView: UIImageView?
-            var placeHolderTimer: Cancellable?
-            
+            var timer: Timer? = nil
             if let placeHolder = placeHolder {
-                placeHolderTimer = Timer.publish(every: waitPlaceHolderTime, on: .main, in: .default)
-                    .autoconnect()
-                    .first()
-                    .sink { _ in
-                        placeHolderImageView = self.showPlaceHolder(image: placeHolder)
+                timer = Timer.scheduledTimer(withTimeInterval: waitPlaceHolderTime, repeats: true) { _ in
+                    DispatchQueue.main.async {
+                        self.base.image = placeHolder
                     }
-            }
-                        
-            if placeHolder != nil {
-                placeHolderTimer?.cancel()
-                hidePlaceHolder(imageView: placeHolderImageView)
+                }
+                timer?.fire()
             }
             
-            let jfImageData = await JFImageCache.shared.getImageWithCache(url: url.absoluteString, usingETag: false)
-            guard let jfImageData = jfImageData else {
-                DispatchQueue.main.async {
-                    print("HERE!!!! image is nil")
-                    self.base.image = nil
-                }
-                return
+            let updatedImageData: JFImageData?
+            if useCache,
+                let cachedjfImageData = JFImageCache.shared.getImageWithCache(url: url.absoluteString) {
+                updatedImageData = cachedjfImageData
+            } else {
+                let jfImageData = await getImageFromNetwork(url: url)
+                updatedImageData = jfImageData
             }
-
-            DispatchQueue.main.async {
-                let downsamplingImage = jfImageData.data.downsampling(to: self.base.frame.size)
-                self.base.image = downsamplingImage
+            
+            timer?.invalidate()
+            
+            if let downsampledImage = await updatedImageData?.data.downsampling(to: self.base.frame.size) {
+                updateImage(downsampledImage)
+            } else {
+                updateImage(updatedImageData?.data.convertToImage())
             }
-
+        }
+    }
+    
+    private func updateImage(_ image: UIImage?) {
+        DispatchQueue.main.async {
+            self.base.image = image
+        }
+    }
+    
+    ///네트워크를 이용해 이미지 반환
+    ///- Parameters:
+    ///     - url: 이미지 URL
+    ///- Returns: 네트워크를 통해 생성한 JeongImageData
+    public func getImageFromNetwork(url: URL, eTag: String? = nil) async -> JFImageData? {
+        do {
+            //네트워크
+            let imageData: JFImageData = try await JFImageDownloader.shared.downloadImage(url: url, eTag: eTag)
+            JFImageCache.shared.saveImageData(url: url.absoluteString, imageData: imageData)
+            
+            return imageData
+        } catch {
+            return nil
         }
     }
     

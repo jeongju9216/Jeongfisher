@@ -70,7 +70,7 @@ public class JFImageCache {
     ///     - url: 이미지 URL
     ///     - usingETag: ETag 사용 여부
     ///- Returns: 캐시 혹은 네트워크를 통해 생성한 JeongImageData
-    public func getImageWithCache(url: String, usingETag: Bool = true) async -> JFImageData? {
+    public func getImageWithCache(url: String, usingETag: Bool = true) -> JFImageData? {
         //메모리 캐시: 만료되었더라도 아직 정리되지 않았다면 다시 살림
         if let memoryCacheData = memoryCache.getData(key: url) {
             JICLogger.log("[ImageCache] Get Memory Cache")
@@ -78,54 +78,29 @@ public class JFImageCache {
         }
         
         //디스크 캐시: 만료된 데이터는 사용하지 않음
-        if var diskCacheData = diskCache.getData(key: url) {
+        if let diskCacheData = diskCache.getData(key: url) {
             if usingETag {
-                let diskDataETag: String = diskCacheData.data.eTag
-                //eTag 확인
-                if let networkImageData = await getImageFromNetwork(url: url, eTag: diskDataETag) {
-                    let serverEtag = networkImageData.eTag
-                    if !serverEtag.isEmpty && serverEtag != diskDataETag {
-                        //다르면 디스크 캐시에 새로운 데이터 저장
-                        JICLogger.log("[ImageCache] Get Disk Cache - Update New Data")
-                        
-                        diskCacheData.data = networkImageData
-                        saveDiskCache(key: url, data: diskCacheData.data)
-                    } else {
-                        JICLogger.log("[ImageCache] Get Disk Cache - Same Data")
-                    }
-                }
+//                let diskDataETag: String = diskCacheData.data.eTag
+//                //eTag 확인
+//                if let networkImageData = await getImageFromNetwork(url: url, eTag: diskDataETag) {
+//                    let serverEtag = networkImageData.eTag
+//                    if !serverEtag.isEmpty && serverEtag != diskDataETag {
+//                        //다르면 디스크 캐시에 새로운 데이터 저장
+//                        JICLogger.log("[ImageCache] Get Disk Cache - Update New Data")
+//
+//                        diskCacheData.data = networkImageData
+//                        saveDiskCache(key: url, data: diskCacheData.data)
+//                    } else {
+//                        JICLogger.log("[ImageCache] Get Disk Cache - Same Data")
+//                    }
+//                }
             }
             
             saveMemoryCache(key: url, data: diskCacheData.data)
             return diskCacheData.data
         }
         
-        JICLogger.log("[ImageCache] Get Network")
-        if let imageData = await getImageFromNetwork(url: url) {
-            saveImageData(url: url, imageData: imageData)
-            return imageData
-        } else {
-            return nil
-        }
-    }
-    
-    ///네트워크를 이용해 이미지 반환
-    ///- Parameters:
-    ///     - url: 이미지 URL
-    ///- Returns: 네트워크를 통해 생성한 JeongImageData
-    public func getImageFromNetwork(url: String, eTag: String? = nil) async -> JFImageData? {
-        do {
-            //네트워크
-            let startTime = CFAbsoluteTimeGetCurrent()
-            let imageData: JFImageData = try await JFImageDownloader.shared.downloadImage(url: url, eTag: eTag)
-            let endTime = CFAbsoluteTimeGetCurrent() - startTime
-            JICLogger.log("[Time] request downloadImage: \(endTime)")
-            
-            return imageData
-        } catch {
-            JICLogger.error("Get Network Cache Error: \(error.localizedDescription)")
-            return nil
-        }
+        return nil
     }
     
     ///캐시에 이미지 데이터 저장
