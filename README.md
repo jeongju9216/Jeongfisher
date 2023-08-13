@@ -1,5 +1,6 @@
 # Jeongfisher
 이미지 캐시 라이브러리입니다.  
+Swift Concurrency를 적극 활용하여 개발하였습니다.  
 노션 페이지 : https://jeong9216.notion.site/CloneStore-JeongImageCache-91f1964617b84c5d8df7da17f1b1d9db  
 
 # 기능
