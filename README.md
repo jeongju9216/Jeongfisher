@@ -13,39 +13,5 @@
 # 설치
 Swift Package Manager(SPM)을 지원합니다.  
 ```
-https://github.com/jeongju9216/JeongImageCache.git
-```
-
-# 사용법
-## 이미지 캐싱
-UIImageView extension을 이용해 이미지 캐싱을 할 수 있습니다.  
-setImageUsingJIC에 url String을 전달하세요.  
-
-``` swift
-let imageURLString: String = "https://example.com/image.png"
-imageView.setImageUsingJIC(url: imageURLString)
-```
-
-#### PlaceHolder
-네트워크 통신이 길어지면 PlaceHolder를 보여줄 수 있습니다.  
-placeHolder 파라미터로 UIImage?를 전달하세요.  
-기본값은 nil이며, placeHolder가 nil인 경우 PlaceHolder를 표시하지 않습니다.
-``` swift
-let placeHolder = UIImage(systemName: "circle.dotted")
-imageView.setImageUsingJIC(url: imageURLString, placeHolder: placeHolder)
-```
-  
-#### waitPlaceHolderTime  
-메서드 호출 n초 후 PlaceHolder를 표시합니다. (n: waitPlaceHolderTime)  
-waitPlaceHolderTime 파라미터로 TimeInterval 타입을 전달하세요.
-기본값은 1초입니다.
-``` swift
-imageView.setImageUsingJIC(url: imageURLString, placeHolder: placeHolder, waitPlaceHolderTime: 3.0)
-```
-
-#### useCache
-캐시 사용 여부를 결정할 수 있습니다.  
-항상 네트워크를 사용하고 싶다면 useCache 파라미터로 false를 전달하세요.
-``` swift
-imageView.setImageUsingJIC(url: imageURLString, useCache: false)
+https://github.com/jeongju9216/Jeongfisher.git
 ```
