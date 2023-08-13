@@ -30,9 +30,9 @@ public class JFImageCache {
     public static let shared: JFImageCache = JFImageCache()
     
     private init() {
-        Task {
-            startCleanCacheTimer()
-        }
+//        Task {
+//            startCleanCacheTimer()
+//        }
     }
     
     public enum CacheType {
