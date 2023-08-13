@@ -9,14 +9,14 @@ import UIKit
 
 /// URL을 이용한 이미지 다운로드
 public final actor JFImageDownloader: JFImageDownloadable {
-    public static let shared: JFImageDownloader = JFImageDownloader()
+    public static let shared = JFImageDownloader()
     
     private init() { }
     
     /// Task 상태
     private enum DownloadEntry {
         case inProgress(Task<JFImageData, Error>)
-        case ready(JFImageData)
+        case complete(JFImageData)
     }
     
     private var cache: [URL: DownloadEntry] = [:]
@@ -32,7 +32,7 @@ public final actor JFImageDownloader: JFImageDownloadable {
             switch cached {
             case .inProgress(let task):
                 return try await task.value
-            case .ready(let jfImageData):
+            case .complete(let jfImageData):
                 return jfImageData
             }
         }
@@ -45,7 +45,7 @@ public final actor JFImageDownloader: JFImageDownloadable {
         
         do {
             let jfImageData = try await task.value
-            cache[url] = .ready(jfImageData)
+            cache[url] = .complete(jfImageData)
             return jfImageData
         } catch {
             cache[url] = nil
