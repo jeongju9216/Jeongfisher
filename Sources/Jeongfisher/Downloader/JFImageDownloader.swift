@@ -7,13 +7,6 @@
 
 import UIKit
 
-public enum JeongNetworkError: Error {
-    case apiError
-    case imageDownloadError
-    case alreadyExistSessionError
-    case urlError
-}
-
 /// URL을 이용한 이미지 다운로드
 public final actor JFImageDownloader: JFImageDownloadable {
     public static let shared: JFImageDownloader = JFImageDownloader()
@@ -82,7 +75,7 @@ public final actor JFImageDownloader: JFImageDownloadable {
                 
                 guard let httpURLResponse = response as? HTTPURLResponse, (200..<400) ~= httpURLResponse.statusCode,
                       let data = data else {
-                    continuation.resume(with: .failure(JeongNetworkError.imageDownloadError))
+                    continuation.resume(with: .failure(JFNetworkError.downloadImageError))
                     return
                 }
                                 

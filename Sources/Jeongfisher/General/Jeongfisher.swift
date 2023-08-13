@@ -16,6 +16,7 @@ public struct JeongfisherWrapper<Base> {
     }
 }
 
+/// Jeongfisher와 호환 여부
 public protocol JeongfisherCompatible: AnyObject {}
 
 extension JeongfisherCompatible {
