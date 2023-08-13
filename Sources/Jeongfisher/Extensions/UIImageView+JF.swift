@@ -28,11 +28,13 @@ extension JeongfisherWrapper where Base: UIImageView {
     ///   - placeHolder: 다운로드 지연 시 보여줄 placeHolder 이미지
     ///   - waitPlaceHolderTime: placeHolder 대기 시간
     ///   - useCache: 캐시 사용 여부. false면 네트워크 다운로드
+    ///   - useETag: eTag 사용 여부.
     public func setImage(
         with url: URL,
         placeHolder: UIImage? = nil,
         waitPlaceHolderTime: TimeInterval = 1.0,
-        useCache: Bool = true)
+        useCache: Bool = true,
+        useETag: Bool = false)
     {
         Task {
             let timer: Timer? = createPlaceHolderTimer(placeHolder, waitTime: waitPlaceHolderTime)
@@ -41,7 +43,7 @@ extension JeongfisherWrapper where Base: UIImageView {
             var mutableSelf = self
             mutableSelf.downloadUrl = url.absoluteString
             
-            let updatedImageData = await fetchImage(with: url, useCache: useCache)
+            let updatedImageData = await fetchImage(with: url, useCache: useCache, useETag: useETag)
             
             timer?.invalidate()
             
@@ -60,10 +62,11 @@ extension JeongfisherWrapper where Base: UIImageView {
     /// - Parameters:
     ///   - url: 이미지 URL
     ///   - useCache: 캐시 사용 여부
+    ///   - useETag: eTag 사용 여부
     /// - Returns: url 처리 결과
-    private func fetchImage(with url: URL, useCache: Bool) async -> JFImageData? {
+    private func fetchImage(with url: URL, useCache: Bool, useETag: Bool) async -> JFImageData? {
         if useCache,
-            let jfImageData = await JFImageCache.shared.getImageWithCache(url: url) {
+            let jfImageData = await JFImageCache.shared.getImageWithCache(url: url, usingETag: useETag) {
             return jfImageData
         } else {
             return try? await JFImageDownloader.shared.downloadImage(from: url)

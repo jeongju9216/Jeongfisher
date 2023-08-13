@@ -14,8 +14,6 @@ public enum JeongNetworkError: Error {
     case urlError
 }
 
-//이미지 다운로드 클래스
-//킹피셔대타에서 캐시에 없을 때 ImageDownloader 이용해서 네트워크로 이미지 요청
 public final actor JFImageDownloader: JFImageDownloadable {
     public static let shared: JFImageDownloader = JFImageDownloader()
     
@@ -54,7 +52,6 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
     }
     
-    //이미지 다운로드. eTag는 disk cache 업데이트용
     public func download(url: URL, eTag: String? = nil) async throws -> JFImageData {
         return try await withCheckedThrowingContinuation { continuation in
             var request = URLRequest(url: url)
@@ -88,7 +85,6 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
     }
     
-    //이미지 다운로드 취소
     public func cancelDownloadImage(url: URL) async {
         guard let cached = cache[url] else { return }
         switch cached {

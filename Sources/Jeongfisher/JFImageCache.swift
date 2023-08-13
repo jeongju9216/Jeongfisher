@@ -75,7 +75,6 @@ public class JFImageCache {
         
         //메모리 캐시: 만료되었더라도 아직 정리되지 않았다면 다시 살림
         if let memoryCacheData = memoryCache.getData(key: key) {
-            print("[ImageCache] Get Memory Cache")
             JFLogger.log("[ImageCache] Get Memory Cache")
             return memoryCacheData.data
         }
@@ -99,12 +98,10 @@ public class JFImageCache {
                 }
             }
             
-            print("[ImageCache] Get Disk Cache")
             saveMemoryCache(key: key, data: diskCacheData.data)
             return diskCacheData.data
         }
         
-        print("[ImageCache] Get Network")
         return await downloadImage(url: url)
     }
     
