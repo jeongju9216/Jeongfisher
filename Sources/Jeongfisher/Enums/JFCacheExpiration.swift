@@ -1,5 +1,5 @@
 //
-//  JeongCacheExpiration.swift
+//  JFCacheExpiration.swift
 //  Jeongfisher
 //
 //  Created by jeongju.yu on 2023/02/15.
@@ -15,7 +15,7 @@ import Foundation
 ///- days : Int일 초과 시 만료
 ///- date : Date를 초과하면 만료
 ///- expired : 만료됨
-public enum JeongCacheExpiration: Codable {
+public enum JFCacheExpiration: Codable {
     case never //만료되지 않음
     case seconds(TimeInterval) //TimerInterval초/분/시 초과하면 만료됨
     case minutes(Int)
@@ -47,6 +47,6 @@ public enum JeongCacheExpiration: Codable {
 ///캐시 아이템의 만료 시간 측정 기준
 ///- create : 캐시 생성일 기준
 ///- lastHit : 마지막 Hit 날짜 기준
-public enum StandardJeongCacheExpiration: Codable { //만료시간 기준
+public enum StandardJFCacheExpiration: Codable { //만료시간 기준
     case create, lastHit
 }

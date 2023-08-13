@@ -11,7 +11,7 @@ import Foundation
 public struct JFCacheItem<T: Codable>: JFCacheItemable {
     public var priority: Int //우선순위(직접 설정할 때만 설정)
     ///캐시 아이템 사이즈
-    public var size: JeongDataSize //원본 이미지 사이즈(화면에 표시되는 사이즈 X)
+    public var size: JFDataSize //원본 이미지 사이즈(화면에 표시되는 사이즈 X)
     ///처음 캐싱된 Date
     public var firstCachedTimeInterval: TimeInterval
     public var firstCachedDate: Date {
@@ -25,9 +25,9 @@ public struct JFCacheItem<T: Codable>: JFCacheItemable {
         return Date(timeIntervalSince1970: lastHitTimeInterval)
     }
     ///캐시 아이템의 만료 시간
-    public var expiration: JeongCacheExpiration
+    public var expiration: JFCacheExpiration
     ///캐시 아이템의 만료 시간 측정 기준
-    public var standardExpiration: StandardJeongCacheExpiration
+    public var standardExpiration: StandardJFCacheExpiration
     public var expiredTimeInterval: TimeInterval {
         switch self.standardExpiration {
         case .create:
@@ -53,10 +53,10 @@ public struct JFCacheItem<T: Codable>: JFCacheItemable {
     ///     - data: 캐시 데이터
     ///     - size: 캐시 데이터 사이즈
     public init(priority: Int = 0,
-         expiration: JeongCacheExpiration = .minutes(5),
-         standardExpiration: StandardJeongCacheExpiration = .lastHit,
+         expiration: JFCacheExpiration = .minutes(5),
+         standardExpiration: StandardJFCacheExpiration = .lastHit,
          data: T,
-         size: JeongDataSize) {
+         size: JFDataSize) {
         self.priority = priority
         self.expiration = expiration
         self.standardExpiration = standardExpiration

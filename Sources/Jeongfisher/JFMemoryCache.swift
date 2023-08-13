@@ -39,15 +39,15 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     private(set) var maxHitCount: Int = 0, minHitCount: Int = 0
     
     private(set) var currentCachedCost: Int64 = 0 //capacity 이상이 되면 정책에 따라 캐시 정리
-    private(set) var capacity: JeongDataSize //메모리캐시 최대 용량
-    private(set) var cacheDataSizeLimit: JeongDataSize //메모리캐시에 저장할 수 있는 데이터 최대 사이즈
+    private(set) var capacity: JFDataSize //메모리캐시 최대 용량
+    private(set) var cacheDataSizeLimit: JFDataSize //메모리캐시에 저장할 수 있는 데이터 최대 사이즈
     private(set) var cachePolicy: JFCachePolicy //중간에 바꾸지 못함
     
     private var isLocking: Bool = false //연속 lock 방지
     private let lock = NSLock()
     
-    public init(capacity: JeongDataSize = .MB(10),
-                cacheDataSizeLimit: JeongDataSize = .KB(200),
+    public init(capacity: JFDataSize = .MB(10),
+                cacheDataSizeLimit: JFDataSize = .KB(200),
                 cachePolicy: JFCachePolicy = .LRU) {
         self.capacity = capacity
         self.cacheDataSizeLimit = cacheDataSizeLimit
@@ -55,7 +55,7 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     }
     
     private func initHeadTail(item: Item) {
-        JICLogger.log("[Memory Cache] initHeadTail")
+        JFLogger.log("[Memory Cache] initHeadTail")
         var item = item
         item.hitCount = -1
         self.head = Node(key: "", value: item)
@@ -77,7 +77,7 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
             return nil
         }
 
-        JICLogger.log("[Memory Cache] Get: \(key)")
+        JFLogger.log("[Memory Cache] Get: \(key)")
 
         //맨 앞으로 노드 옮기기
         removeNode(cacheNode)
@@ -88,7 +88,7 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     }
     
     //새로운 데이터 크기가 (메모리캐시 용량 || 아이템 크기 제한)보다 크면 저장 못함
-    internal func isLessSizeThanDataSizeLimit(size: JeongDataSize) -> Bool {
+    internal func isLessSizeThanDataSizeLimit(size: JFDataSize) -> Bool {
         return cacheDataSizeLimit.byte >= size.byte
     }
     
@@ -100,13 +100,13 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
         
         lockThread()
 
-        JICLogger.log("[Memory Cache] Capacity: \(capacity.byte) / current: \(currentCachedCost) / size limit: \(cacheDataSizeLimit.byte) / data size: \(data.size.byte)")
+        JFLogger.log("[Memory Cache] Capacity: \(capacity.byte) / current: \(currentCachedCost) / size limit: \(cacheDataSizeLimit.byte) / data size: \(data.size.byte)")
         if head == nil && tail == nil {
             initHeadTail(item: data)
         }
                 
         if cache[key] != nil && !overwrite {
-            throw JeongCacheError.saveError
+            throw JFCacheError.saveError
         }
         
         //이미 있는 데이터면 Cost 빼기
@@ -124,7 +124,7 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
         //노드 추가
         if let cacheNode = cache[key] {
             //hit
-            JICLogger.log("[Memory Cache] Update: \(key)")
+            JFLogger.log("[Memory Cache] Update: \(key)")
             removeNode(cacheNode)
             
             let hitNode = hit(node: cacheNode, update: data)
@@ -132,7 +132,7 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
             cache[key] = hitNode
         } else {
             //miss
-            JICLogger.log("[Memory Cache] Save: \(key)")
+            JFLogger.log("[Memory Cache] Save: \(key)")
             let newNode: Node = Node(key: key, value: data)
             addNode(newNode)
             cache[key] = newNode
@@ -156,7 +156,7 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
             return nil
         }
         
-        JICLogger.log("[Memory Cache] Delete: \(key)")
+        JFLogger.log("[Memory Cache] Delete: \(key)")
         removeNode(cacheNode)
         
         cache[key] = nil
@@ -211,7 +211,7 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
         
         //hitCount로 정렬
         let newHitCount = newNode.value.hitCount
-        JICLogger.log("[Memory Cache] maxHitCount: \(maxHitCount) / minHitCount: \(minHitCount) / newHitCount: \(newHitCount)")
+        JFLogger.log("[Memory Cache] maxHitCount: \(maxHitCount) / minHitCount: \(minHitCount) / newHitCount: \(newHitCount)")
 
         let distanceFromHead = abs(maxHitCount - newHitCount)
         let distanceFromTail = abs(minHitCount - newHitCount)
@@ -279,7 +279,7 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     
     @discardableResult
     public func cleanExpiredData() -> Int {
-        JICLogger.log("[Memory Cache] Clean Expired Data")
+        JFLogger.log("[Memory Cache] Clean Expired Data")
         var deleteCount: Int = 0
         
         //head, tail 제외

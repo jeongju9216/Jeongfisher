@@ -8,7 +8,7 @@
 import Foundation
 import OSLog
 
-final class JICLogger {
+final class JFLogger {
     static func log<T>(_ object: T?, level: OSLogType = .default, fileName: String = #fileID, line: Int = #line, funcName: String = #function) {
         var message = ""
         if let object = object {

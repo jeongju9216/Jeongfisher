@@ -1,5 +1,5 @@
 //
-//  JeongDataSize.swift
+//  JFDataSize.swift
 //  Jeongfisher
 //
 //  Created by jeongju.yu on 2023/02/16.
@@ -8,7 +8,7 @@
 import Foundation
 
 ///캐시 데이터 크기
-public enum JeongDataSize: Codable {
+public enum JFDataSize: Codable {
     case Byte(Int)
     case KB(Int)
     case MB(Int)

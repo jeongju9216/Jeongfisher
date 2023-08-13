@@ -13,7 +13,7 @@ private struct JFAssociatedKeys {
 
 extension JeongfisherWrapper where Base: UIImageView {
     
-    var downloadUrl: String? {
+    private var downloadUrl: String? {
         get {
             getAssociatedObject(base, &JFAssociatedKeys.downloadUrl)
         }

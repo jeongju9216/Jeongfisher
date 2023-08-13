@@ -46,22 +46,22 @@ public class JFImageCache {
                                                                        cacheDataSizeLimit: .MB(1),
                                                                        cachePolicy: .LRU)
     //메모리 캐시 만료 시간
-    private(set) var memoryCacheItemExpiredTime: JeongCacheExpiration = .minutes(10)
+    private(set) var memoryCacheItemExpiredTime: JFCacheExpiration = .minutes(10)
     //메모리 캐시 만료 시간 측정 기준
-    private(set) var memoryCacheItemStandardExpiration: StandardJeongCacheExpiration = .lastHit
+    private(set) var memoryCacheItemStandardExpiration: StandardJFCacheExpiration = .lastHit
     //만료된 메모리 캐시 정리 주기
-    private(set) var cleanMemoryCacheExpiredTime: JeongCacheExpiration = .minutes(5)
+    private(set) var cleanMemoryCacheExpiredTime: JFCacheExpiration = .minutes(5)
     
     //디스크 캐시 : FileManager를 이용한 디스크 캐시
     private var diskCache: JFDiskCache<ImageCacheItem> = JFDiskCache(capacity: .GB(1),
                                                                  cacheDataSizeLimit: .MB(10),
                                                                  cacheFolderName: "JeongfisherCache")
     //디스크 캐시 만료 시간
-    private(set) var diskCacheItemExpiredTime: JeongCacheExpiration = .days(7)
+    private(set) var diskCacheItemExpiredTime: JFCacheExpiration = .days(7)
     //디스크 캐시 만료 시간 측정 기준
-    private(set) var diskCacheItemStandardExpiration: StandardJeongCacheExpiration = .create
+    private(set) var diskCacheItemStandardExpiration: StandardJFCacheExpiration = .create
     //만료된 디스크 캐시 정리 주기
-    private(set) var cleanDiskCacheExpiredTime: JeongCacheExpiration = .days(7)
+    private(set) var cleanDiskCacheExpiredTime: JFCacheExpiration = .days(7)
     
     private var cleanMemoryCacheCancellable: Cancellable?
     
@@ -75,7 +75,7 @@ public class JFImageCache {
         
         //메모리 캐시: 만료되었더라도 아직 정리되지 않았다면 다시 살림
         if let memoryCacheData = memoryCache.getData(key: key) {
-            JICLogger.log("[ImageCache] Get Memory Cache")
+            JFLogger.log("[ImageCache] Get Memory Cache")
             return memoryCacheData.data
         }
         
@@ -88,12 +88,12 @@ public class JFImageCache {
                     let serverEtag = networkImageData.eTag
                     if !serverEtag.isEmpty && serverEtag != diskDataETag {
                         //다르면 디스크 캐시에 새로운 데이터 저장
-                        JICLogger.log("[ImageCache] Get Disk Cache - Update New Data")
+                        JFLogger.log("[ImageCache] Get Disk Cache - Update New Data")
 
                         diskCacheData.data = networkImageData
                         saveDiskCache(key: key, data: diskCacheData.data)
                     } else {
-                        JICLogger.log("[ImageCache] Get Disk Cache - Same Data")
+                        JFLogger.log("[ImageCache] Get Disk Cache - Same Data")
                     }
                 }
             }
@@ -150,7 +150,7 @@ public class JFImageCache {
     ///- Parameters:
     ///     - cacheExpiredTime: 만료 시간
     ///     - cacheType: memory or disk
-    public func updateCacheItemExpiredTime(_ cacheExpiredTime: JeongCacheExpiration,
+    public func updateCacheItemExpiredTime(_ cacheExpiredTime: JFCacheExpiration,
                                            cacheType: CacheType) {
         switch cacheType {
         case .memory:
@@ -164,7 +164,7 @@ public class JFImageCache {
     ///- Parameters:
     ///     - standardExpiration: 만료 시간 측정 기준
     ///     - cacheType: memory or disk
-    public func updateCacheItemStandardExpiration(_ standardExpiration: StandardJeongCacheExpiration,
+    public func updateCacheItemStandardExpiration(_ standardExpiration: StandardJFCacheExpiration,
                                                   cacheType: CacheType) {
         switch cacheType {
         case .memory:
@@ -178,7 +178,7 @@ public class JFImageCache {
     ///- Parameters:
     ///     - cleanCacheTime: 캐시 정리 시간
     ///     - cacheType: memory or disk
-    public func updateCleanCacheTime(cleanCacheTime: JeongCacheExpiration,
+    public func updateCleanCacheTime(cleanCacheTime: JFCacheExpiration,
                                      cacheType: CacheType) {
         switch cacheType {
         case .memory:
@@ -205,7 +205,7 @@ extension JFImageCache {
             .sink { [weak self] _ in
                 guard let self = self else { return }
                 
-                JICLogger.log("[ImageCache] Clean Memory Cache Data")
+                JFLogger.log("[ImageCache] Clean Memory Cache Data")
                 
                 self.cleanExpiredMemoryCacheData()
             }
@@ -229,7 +229,7 @@ extension JFImageCache {
 //MARK: - Memory Cache
 extension JFImageCache {
     private func saveMemoryCache(key: String, data: JFImageData) {
-        let dataSize: JeongDataSize = .Byte(data.data.count)
+        let dataSize: JFDataSize = .Byte(data.data.count)
         if memoryCache.isLessSizeThanDataSizeLimit(size: dataSize) {
             let cacheItem: ImageCacheItem = ImageCacheItem(expiration: memoryCacheItemExpiredTime,
                                                            standardExpiration: memoryCacheItemStandardExpiration,
@@ -238,10 +238,10 @@ extension JFImageCache {
             do {
                 try self.memoryCache.saveCache(key: key, data: cacheItem)
             } catch {
-                JICLogger.error("Save Memory Cache Error")
+                JFLogger.error("Save Memory Cache Error")
             }
         } else {
-            JICLogger.log("[Memory Cache] Data is Bigger than data size limit")
+            JFLogger.log("[Memory Cache] Data is Bigger than data size limit")
         }
     }
     
@@ -255,7 +255,7 @@ extension JFImageCache {
 //MARK: - Disk Cache
 extension JFImageCache {
     private func saveDiskCache(key: String, data: JFImageData) {
-        let dataSize: JeongDataSize = .Byte(data.data.count)
+        let dataSize: JFDataSize = .Byte(data.data.count)
         if diskCache.isLessSizeThanDataSizeLimit(size: dataSize) {
             let cacheItem: ImageCacheItem = ImageCacheItem(expiration: diskCacheItemExpiredTime,
                                                            standardExpiration: diskCacheItemStandardExpiration,
@@ -264,10 +264,10 @@ extension JFImageCache {
             do {
                 try self.diskCache.saveCache(key: key, data: cacheItem)
             } catch {
-                JICLogger.error("Save Disk Cache Error")
+                JFLogger.error("Save Disk Cache Error")
             }
         } else {
-            JICLogger.log("[Disk Cache] Data is Bigger than data size limit")
+            JFLogger.log("[Disk Cache] Data is Bigger than data size limit")
         }
     }
     
@@ -276,7 +276,7 @@ extension JFImageCache {
             do {
                 try self?.diskCache.cleanExpiredData()
             } catch {
-                JICLogger.error(error.localizedDescription)
+                JFLogger.error(error.localizedDescription)
             }
         }
     }

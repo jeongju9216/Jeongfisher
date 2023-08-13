@@ -24,13 +24,13 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
     private let folderName: String
     
     private(set) var currentCachedCost: Int64 = 0
-    private(set) var capacity: JeongDataSize
-    private(set) var cacheDataSizeLimit: JeongDataSize
+    private(set) var capacity: JFDataSize
+    private(set) var cacheDataSizeLimit: JFDataSize
     
     private let fileManager = FileManager.default
     
-    public init(capacity: JeongDataSize = .MB(100),
-         cacheDataSizeLimit: JeongDataSize = .Infinity,
+    public init(capacity: JFDataSize = .MB(100),
+         cacheDataSizeLimit: JFDataSize = .Infinity,
          cacheFolderName: String = "CloneStore") {
         self.capacity = capacity
         self.cacheDataSizeLimit = cacheDataSizeLimit
@@ -39,37 +39,37 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
         createDirectory()
     }
     
-    internal func isLessSizeThanDataSizeLimit(size: JeongDataSize) -> Bool {
+    internal func isLessSizeThanDataSizeLimit(size: JFDataSize) -> Bool {
         return cacheDataSizeLimit.byte >= size.byte
     }
     
     //캐시 데이터 저장
     public func saveCache(key: String, data: Item, overwrite: Bool = false) throws {
-        JICLogger.log("[Disk Cache] Capacity: \(capacity.byte) / current: \(currentCachedCost) / data size: \(data.size.byte)")
+        JFLogger.log("[Disk Cache] Capacity: \(capacity.byte) / current: \(currentCachedCost) / data size: \(data.size.byte)")
 
         let key = key.replacingOccurrences(of: "/", with: "").replacingOccurrences(of: ".", with: "")
         let newKey: String = folderName + "/" + key
         
         guard let fileURL = getCacheFileURL(fileName: newKey) else {
-            JICLogger.error("[Disk Cache] fileURL is nil")
+            JFLogger.error("[Disk Cache] fileURL is nil")
             //todo: throw error
-            throw JeongCacheError.saveError
+            throw JFCacheError.saveError
         }
         
         if fileManager.fileExists(atPath: newKey) && !overwrite {
-            JICLogger.log("[Disk Cache] \(newKey) is Already Exists.")
-            throw JeongCacheError.saveError
+            JFLogger.log("[Disk Cache] \(newKey) is Already Exists.")
+            throw JFCacheError.saveError
         }
 
         if let contents = encode(item: data) {
             let saveResult: Bool = fileManager.createFile(atPath: fileURL.path, contents: contents)
-            JICLogger.log("[Disk Cache] Save(\(saveResult)): \(newKey)")
+            JFLogger.log("[Disk Cache] Save(\(saveResult)): \(newKey)")
             if !saveResult {
-                throw JeongCacheError.saveError
+                throw JFCacheError.saveError
             }
         } else {
-            JICLogger.error("[Disk Cache] contents is nil")
-            throw JeongCacheError.saveError
+            JFLogger.error("[Disk Cache] contents is nil")
+            throw JFCacheError.saveError
         }
     }
     
@@ -92,7 +92,7 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
                 return nil
             }
             
-            JICLogger.log("[Disk Cache] Get: \(newKey)")
+            JFLogger.log("[Disk Cache] Get: \(newKey)")
             return cacheItem
         } else {
             return nil
@@ -102,14 +102,14 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
     //캐시 데이터 삭제
     @discardableResult
     public func deleteCache(url: URL) throws -> Item? {
-        JICLogger.log("[Disk Cache] Delete: \(url)")
+        JFLogger.log("[Disk Cache] Delete: \(url)")
         do {
             let item: Item? = getData(key: url.absoluteString)
             try fileManager.removeItem(at: url)
             return item
         } catch {
             //todo: remove 에러
-            throw JeongCacheError.deleteError
+            throw JFCacheError.deleteError
         }
     }
     
@@ -117,7 +117,7 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
     public func deleteAllCache() throws -> Int {
         var deleteCount: Int = 0
         guard let folderURL = getCacheFileURL(fileName: folderName) else {
-            throw JeongCacheError.deleteError
+            throw JFCacheError.deleteError
         }
     
         do {
@@ -135,7 +135,7 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
             
             return deleteCount
         } catch {
-            throw JeongCacheError.deleteError
+            throw JFCacheError.deleteError
         }
     }
     
@@ -143,10 +143,10 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
     @discardableResult
     public func cleanExpiredData() throws -> Int {
         var deleteCount: Int = 0
-        JICLogger.log("[Disk Cache] Clean Expired Data")
+        JFLogger.log("[Disk Cache] Clean Expired Data")
         
         guard let folderURL = getCacheFileURL(fileName: folderName) else {
-            throw JeongCacheError.fetchError
+            throw JFCacheError.fetchError
         }
     
         do {
@@ -165,7 +165,7 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
             
             return deleteCount
         } catch {
-            throw JeongCacheError.fetchError
+            throw JFCacheError.fetchError
         }
     }
     
@@ -178,7 +178,7 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
             //withIntermediateDirectories true => 상위 폴더까지 모두 생성
             try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
         } catch {
-            JICLogger.error(error.localizedDescription)
+            JFLogger.error(error.localizedDescription)
         }
     }
     
