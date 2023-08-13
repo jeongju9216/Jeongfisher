@@ -16,20 +16,46 @@ public enum JeongNetworkError: Error {
 
 //이미지 다운로드 클래스
 //킹피셔대타에서 캐시에 없을 때 ImageDownloader 이용해서 네트워크로 이미지 요청
-public final class JFImageDownloader: JFImageDownloadable {
+public final actor JFImageDownloader: JFImageDownloadable {
     public static let shared: JFImageDownloader = JFImageDownloader()
     
     private init() { }
     
-    //request들 보관하는 디렉토리(키: URL string)
-    private var requestDir: [String: URLSessionDataTask] = [:]
+    private enum DownloadEntry {
+        case inProgress(Task<JFImageData, Error>)
+        case ready(JFImageData)
+    }
     
-    //get: sync => 순차적 진행해야 Write랑 안 겹쳐서 정확한 값 얻어옴
-    //set: async + barrier => 다음 코드를 진행 && 데이터 레이스 방지
-    private var reqeusetSerialQueue = DispatchQueue(label: "com.jeongfisher.reqeusetQueue", attributes: .concurrent)
+    private var cache: [URL: DownloadEntry] = [:]
     
-    //이미지 다운로드
-    public func downloadImage(url: URL, eTag: String? = nil) async throws -> JFImageData {
+    public func downloadImage(from url: URL, eTag: String? = nil) async throws -> JFImageData {
+        if let cached = cache[url] {
+            switch cached {
+            case .inProgress(let task):
+                return try await task.value
+            case .ready(let jfImageData):
+                return jfImageData
+            }
+        }
+        
+        let task = Task {
+            try await download(url: url, eTag: eTag)
+        }
+        
+        cache[url] = .inProgress(task)
+        
+        do {
+            let jfImageData = try await task.value
+            cache[url] = .ready(jfImageData)
+            return jfImageData
+        } catch {
+            cache[url] = nil
+            throw error
+        }
+    }
+    
+    //이미지 다운로드. eTag는 disk cache 업데이트용
+    public func download(url: URL, eTag: String? = nil) async throws -> JFImageData {
         return try await withCheckedThrowingContinuation { continuation in
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
@@ -38,64 +64,39 @@ public final class JFImageDownloader: JFImageDownloadable {
                 request.addValue(eTag, forHTTPHeaderField: "If-None-Match")
             }
             
-            let task: URLSessionDataTask = URLSession.shared.dataTask(with: request) { [weak self] (data, response, error) in
-                guard let self = self else {
-                    self?.removeDictionaryValue(key: url.absoluteString)
-                    continuation.resume(with: .failure(JeongNetworkError.apiError))
-                    return
-                }
-                
+            let task: URLSessionDataTask = URLSession.shared.dataTask(with: request) { (data, response, error) in
                 if let error = error {
-                    self.removeDictionaryValue(key: url.absoluteString)
                     continuation.resume(with: .failure(error))
                     return
                 }
                 
                 guard let httpURLResponse = response as? HTTPURLResponse, (200..<400) ~= httpURLResponse.statusCode,
                       let data = data else {
-                    self.removeDictionaryValue(key: url.absoluteString)
                     continuation.resume(with: .failure(JeongNetworkError.imageDownloadError))
                     return
                 }
-                
-                JICLogger.log("[JIC] statusCode: \(httpURLResponse.statusCode) / data: \(data.count)")
-                
+                                
                 let eTag: String = httpURLResponse.allHeaderFields["Etag"] as? String ?? ""
-                //                let eTag: String = "Update Test Etag"
                 let imageFormat: JFImageFormat = url.absoluteString.getJFImageFormatFromURLString()
                 
                 let imageData = JFImageData(data: data, eTag: eTag, imageExtension: imageFormat)
                 
-                self.removeDictionaryValue(key: url.absoluteString)
                 continuation.resume(with: .success(imageData))
             }
             
-            addRequestToDictionary(key: url.absoluteString, request: task)
+            task.resume()
         }
     }
     
     //이미지 다운로드 취소
-    public func cancelDownloadImage(url: String) {
-        reqeusetSerialQueue.sync {
-            if self.requestDir[url] != nil {
-                self.requestDir[url]?.cancel()
-                removeDictionaryValue(key: url)
+    public func cancelDownloadImage(url: URL) async {
+        guard let cached = cache[url] else { return }
+        switch cached {
+        case .inProgress(let task):
+            if !task.isCancelled {
+                task.cancel()
             }
+        default: return
         }
-    }
-
-    private func addRequestToDictionary(key: String, request: URLSessionDataTask) {
-        reqeusetSerialQueue.async(flags: .barrier, execute: {
-            if self.requestDir[key] == nil {
-                request.resume()
-                self.requestDir[key] = request
-            }
-        })
-    }
-
-    private func removeDictionaryValue(key: String) {
-        reqeusetSerialQueue.async(flags: .barrier, execute: {
-            self.requestDir[key] = nil
-        })
     }
 }

@@ -8,9 +8,20 @@
 import UIKit
 import Combine
 
+private struct JFAssociatedKeys {
+    static var downloadUrl = "downloadUrl"
+}
+
 extension JeongfisherWrapper where Base: UIImageView {
     
-    
+    var downloadUrl: String? {
+        get {
+            getAssociatedObject(base, &JFAssociatedKeys.downloadUrl)
+        }
+        set {
+            setRetainedAssociatedObject(base, &JFAssociatedKeys.downloadUrl, newValue)
+        }
+    }
     
     ///url을 이용해 UIImage 설정
     ///
@@ -19,30 +30,20 @@ extension JeongfisherWrapper where Base: UIImageView {
     ///     - placeHolder: 이미지 다운로드 지연 시 보여줄 placeHolder
     ///     - watiPlaceHolderTime: placeHolde를 보여주기까지의 대기 시간
     ///     - useCache: 캐시 사용 여부 결정. false면 네트워크를 통해 이미지 다운로드
-    public func setImage(with url: URL,
-                          placeHolder: UIImage? = nil,
-                          waitPlaceHolderTime: TimeInterval = 1,
-                         useCache: Bool = true) {
-        
+    public func setImage(
+        with url: URL,
+        placeHolder: UIImage? = nil,
+        waitPlaceHolderTime: TimeInterval = 1.0,
+        useCache: Bool = true)
+    {
         Task {
-            var timer: Timer? = nil
-            if let placeHolder = placeHolder {
-                timer = Timer.scheduledTimer(withTimeInterval: waitPlaceHolderTime, repeats: true) { _ in
-                    DispatchQueue.main.async {
-                        self.base.image = placeHolder
-                    }
-                }
-                timer?.fire()
-            }
+            let timer: Timer? = createPlaceHolderTimer(placeHolder, waitTime: waitPlaceHolderTime)
+            timer?.fire()
             
-            let updatedImageData: JFImageData?
-            if useCache,
-                let cachedjfImageData = JFImageCache.shared.getImageWithCache(url: url.absoluteString) {
-                updatedImageData = cachedjfImageData
-            } else {
-                let jfImageData = await getImageFromNetwork(url: url)
-                updatedImageData = jfImageData
-            }
+            var mutableSelf = self
+            mutableSelf.downloadUrl = url.absoluteString
+            
+            let updatedImageData = await fetchImage(with: url, useCache: useCache)
             
             timer?.invalidate()
             
@@ -51,28 +52,23 @@ extension JeongfisherWrapper where Base: UIImageView {
             } else {
                 updateImage(updatedImageData?.data.convertToImage())
             }
+            
+            mutableSelf.downloadUrl = nil
         }
     }
     
+    private func fetchImage(with url: URL, useCache: Bool) async -> JFImageData? {
+        if useCache,
+            let jfImageData = await JFImageCache.shared.getImageWithCache(url: url) {
+            return jfImageData
+        } else {
+            return try? await JFImageDownloader.shared.downloadImage(from: url)
+        }
+    }
+
     private func updateImage(_ image: UIImage?) {
         DispatchQueue.main.async {
             self.base.image = image
-        }
-    }
-    
-    ///네트워크를 이용해 이미지 반환
-    ///- Parameters:
-    ///     - url: 이미지 URL
-    ///- Returns: 네트워크를 통해 생성한 JeongImageData
-    public func getImageFromNetwork(url: URL, eTag: String? = nil) async -> JFImageData? {
-        do {
-            //네트워크
-            let imageData: JFImageData = try await JFImageDownloader.shared.downloadImage(url: url, eTag: eTag)
-            JFImageCache.shared.saveImageData(url: url.absoluteString, imageData: imageData)
-            
-            return imageData
-        } catch {
-            return nil
         }
     }
     
@@ -80,25 +76,40 @@ extension JeongfisherWrapper where Base: UIImageView {
     ///
     ///- Parameters:
     ///     - url: 이미지 URL
-    public func cancelDownloadImage(url: String) {
-//        JFImageDownloader.shared.cancelDownloadImage(url: url)
+    public func cancelDownloadImage() {
+        guard let downloadUrlString = downloadUrl,
+              let url = URL(string: downloadUrlString) else { return }
+        
+        Task {
+            await JFImageDownloader.shared.cancelDownloadImage(url: url)
+        }
+    }
+}
+
+private extension JeongfisherWrapper where Base: UIImageView {
+    func createPlaceHolderTimer(_ placeHolder: UIImage?, waitTime: TimeInterval) -> Timer? {
+        guard let placeHolder = placeHolder else { return nil }
+        
+        let timer = Timer.scheduledTimer(withTimeInterval: waitTime, repeats: true) { _ in
+            showPlaceHolder(image: placeHolder)
+        }
+        
+        return timer
     }
     
-    private func showPlaceHolder(image: UIImage) -> UIImageView {
-        let placeHolderImageView = UIImageView(image: image)
-        placeHolderImageView.contentMode = .scaleAspectFit
-        
-        self.base.addSubview(placeHolderImageView)
-        placeHolderImageView.translatesAutoresizingMaskIntoConstraints = false
+    func showPlaceHolder(image: UIImage) {
+        DispatchQueue.main.async {
+            self.base.image = image
+        }
+    }
+}
 
-        placeHolderImageView.centerXAnchor.constraint(equalTo: self.base.centerXAnchor).isActive = true
-        placeHolderImageView.centerYAnchor.constraint(equalTo: self.base.centerYAnchor).isActive = true
-        
-        return placeHolderImageView
+private extension JeongfisherWrapper {
+    func getAssociatedObject<T>(_ object: Any, _ key: UnsafeRawPointer) -> T? {
+        return objc_getAssociatedObject(object, key) as? T
     }
 
-    private func hidePlaceHolder(imageView: UIImageView?) {
-        imageView?.removeFromSuperview()
+    func setRetainedAssociatedObject<T>(_ object: Any, _ key: UnsafeRawPointer, _ value: T) {
+        objc_setAssociatedObject(object, key, value, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     }
-    
 }

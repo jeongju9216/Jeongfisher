@@ -8,6 +8,6 @@
 import UIKit
 
 protocol JFImageDownloadable {
-    func downloadImage(url: URL, eTag: String?) async throws -> JFImageData
-    func cancelDownloadImage(url: String)
+    func downloadImage(from url: URL, eTag: String?) async throws -> JFImageData
+    func cancelDownloadImage(url: URL) async
 }
