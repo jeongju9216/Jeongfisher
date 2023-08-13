@@ -12,6 +12,11 @@ extension Data {
         return UIImage(data: self)
     }
     
+    /// 이미지 downsampling 메서드
+    /// - Parameters:
+    ///   - targetSize: downsampling 사이즈
+    ///   - scale: scale 수치
+    /// - Returns: downsampling 결과
     public func downsampling(to targetSize: CGSize, scale: CGFloat = 1) -> UIImage? {
         let imageSourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let imageSource = CGImageSourceCreateWithData(self as CFData, imageSourceOptions) else { return nil }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-///캐시 데이터 크기
+/// 캐시 데이터 크기
 public enum JFDataSize: Codable {
     case Byte(Int)
     case KB(Int)

@@ -13,6 +13,9 @@ public enum JFImageFormat: Codable {
 }
 
 extension UIImage {
+    /// UIImage를 Data로 변환
+    /// - Parameter format: 이미지 format
+    /// - Returns: UIImage를 변환한 data
     public func convertToData(format: JFImageFormat) -> Data? {
         switch format {
         case .png:

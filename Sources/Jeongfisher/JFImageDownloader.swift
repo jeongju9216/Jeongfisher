@@ -14,11 +14,13 @@ public enum JeongNetworkError: Error {
     case urlError
 }
 
+/// URL을 이용한 이미지 다운로드
 public final actor JFImageDownloader: JFImageDownloadable {
     public static let shared: JFImageDownloader = JFImageDownloader()
     
     private init() { }
     
+    /// Task 상태
     private enum DownloadEntry {
         case inProgress(Task<JFImageData, Error>)
         case ready(JFImageData)
@@ -26,7 +28,13 @@ public final actor JFImageDownloader: JFImageDownloadable {
     
     private var cache: [URL: DownloadEntry] = [:]
     
+    /// URL 이미지 다운로드
+    /// - Parameters:
+    ///   - url: 이미지 URL
+    ///   - eTag: 이미지 eTag
+    /// - Returns: 이미지 다운로드 결과
     public func downloadImage(from url: URL, eTag: String? = nil) async throws -> JFImageData {
+        //이미 같은 URL 요청이 들어온 경우 Task 완료 대기
         if let cached = cache[url] {
             switch cached {
             case .inProgress(let task):
@@ -52,7 +60,12 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
     }
     
-    public func download(url: URL, eTag: String? = nil) async throws -> JFImageData {
+    /// URL 이미지 다운로드
+    /// - Parameters:
+    ///   - url: 이미지 URL
+    ///   - eTag: 이미지 eTag
+    /// - Returns: 이미지 다운로드 결과
+    private func download(url: URL, eTag: String? = nil) async throws -> JFImageData {
         return try await withCheckedThrowingContinuation { continuation in
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
@@ -85,8 +98,11 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
     }
     
+    /// URL 이미지 다운로드 취소
+    /// - Parameter url: 취소할 이미지 URL
     public func cancelDownloadImage(url: URL) async {
         guard let cached = cache[url] else { return }
+        
         switch cached {
         case .inProgress(let task):
             if !task.isCancelled {

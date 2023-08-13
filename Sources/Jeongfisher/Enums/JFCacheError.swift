@@ -7,7 +7,7 @@
 
 import Foundation
 
-///캐시에서 발생하는 에러
+/// Cache에서 발생하는 에러
 enum JFCacheError: Error {
     case saveError
     case fetchError

@@ -29,9 +29,11 @@ open class JFDiskCache<Item: JFCacheItemable>: JFCacheable {
     
     private let fileManager = FileManager.default
     
-    public init(capacity: JFDataSize = .MB(100),
-         cacheDataSizeLimit: JFDataSize = .Infinity,
-         cacheFolderName: String = "CloneStore") {
+    public init(
+        capacity: JFDataSize = .Infinity,
+        cacheDataSizeLimit: JFDataSize = .Infinity,
+        cacheFolderName: String = "JeongfisherCache")
+    {
         self.capacity = capacity
         self.cacheDataSizeLimit = cacheDataSizeLimit
         self.folderName = cacheFolderName

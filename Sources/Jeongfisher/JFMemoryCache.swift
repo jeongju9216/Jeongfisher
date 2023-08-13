@@ -7,18 +7,18 @@
 
 import UIKit
 
-///캐시 정책
-///- LRU: 오래 사용하지 않은 데이터 삭제
-///- LFU: 적게 사용한 데이터 삭제
+/// 캐시 정책
+/// - LRU: 오래 사용하지 않은 데이터 삭제
+/// - LFU: 적게 사용한 데이터 삭제
 public enum JFCachePolicy {
-    ///오래 사용하지 않은 데이터 삭제
+    /// 오래 사용하지 않은 데이터 삭제
     case LRU
-    ///적게 사용한 데이터 삭제
+    /// 적게 사용한 데이터 삭제
     case LFU
-    case Custom(compareRule: ((_ oldItem: any JFCacheItemable, _ newItem: any JFCacheItemable) -> Bool))
+//    case Custom(compareRule: ((_ oldItem: any JFCacheItemable, _ newItem: any JFCacheItemable) -> Bool))
 }
 
-///메모리 캐싱을 담당하는 클래스
+/// 메모리 캐싱을 담당하는 클래스
 open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     public typealias Key = String
     public typealias Value = Item
@@ -43,19 +43,19 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     private(set) var cacheDataSizeLimit: JFDataSize //메모리캐시에 저장할 수 있는 데이터 최대 사이즈
     private(set) var cachePolicy: JFCachePolicy //중간에 바꾸지 못함
     
-    private var isLocking: Bool = false //연속 lock 방지
     private let lock = NSLock()
     
-    public init(capacity: JFDataSize = .MB(10),
-                cacheDataSizeLimit: JFDataSize = .KB(200),
-                cachePolicy: JFCachePolicy = .LRU) {
+    public init(
+        capacity: JFDataSize = .MB(8192), //NSCache와 동일한 capacity
+        cacheDataSizeLimit: JFDataSize = .Infinity,
+        cachePolicy: JFCachePolicy = .LRU)
+    {
         self.capacity = capacity
         self.cacheDataSizeLimit = cacheDataSizeLimit
         self.cachePolicy = cachePolicy
     }
     
     private func initHeadTail(item: Item) {
-        JFLogger.log("[Memory Cache] initHeadTail")
         var item = item
         item.hitCount = -1
         self.head = Node(key: "", value: item)
@@ -66,18 +66,11 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     }
     
     public func getData(key: String) -> Item? {
-        defer {
-            unlockThread()
-        }
-        
-        lockThread()
+        defer { lock.unlock() }
+        lock.lock()
         
         //아이템이 없으면 nil 반환
-        guard let cacheNode = cache[key] else {
-            return nil
-        }
-
-        JFLogger.log("[Memory Cache] Get: \(key)")
+        guard let cacheNode = cache[key] else { return nil }
 
         //맨 앞으로 노드 옮기기
         removeNode(cacheNode)
@@ -94,17 +87,13 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     
     //캐시 데이터 저장
     public func saveCache(key: String, data: Item, overwrite: Bool = true) throws {
-        defer {
-            unlockThread()
-        }
-        
-        lockThread()
+        defer { lock.unlock() }
+        lock.lock()
 
-        JFLogger.log("[Memory Cache] Capacity: \(capacity.byte) / current: \(currentCachedCost) / size limit: \(cacheDataSizeLimit.byte) / data size: \(data.size.byte)")
         if head == nil && tail == nil {
             initHeadTail(item: data)
         }
-                
+        
         if cache[key] != nil && !overwrite {
             throw JFCacheError.saveError
         }
@@ -124,7 +113,6 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
         //노드 추가
         if let cacheNode = cache[key] {
             //hit
-            JFLogger.log("[Memory Cache] Update: \(key)")
             removeNode(cacheNode)
             
             let hitNode = hit(node: cacheNode, update: data)
@@ -132,7 +120,6 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
             cache[key] = hitNode
         } else {
             //miss
-            JFLogger.log("[Memory Cache] Save: \(key)")
             let newNode: Node = Node(key: key, value: data)
             addNode(newNode)
             cache[key] = newNode
@@ -145,22 +132,13 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     //캐시 데이터 삭제
     @discardableResult
     public func deleteCache(key: String) -> Item? {
-        defer {
-            unlockThread()
-        }
+        defer { lock.unlock() }
+        lock.lock()
         
-        lockThread()
+        guard let cacheNode = cache[key] else { return nil }
         
-        guard let cacheNode = cache[key] else {
-            unlockThread()
-            return nil
-        }
-        
-        JFLogger.log("[Memory Cache] Delete: \(key)")
         removeNode(cacheNode)
-        
         cache[key] = nil
-        unlockThread()
         
         return cacheNode.value
     }
@@ -185,20 +163,6 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
             insertFront(newNode)
         case .LFU:
             addNodeForLFU(newNode: newNode)
-        case .Custom(let compareRule):
-            var curr = head
-            while curr?.next != nil {
-                if let node = curr, let nextNode = node.next,
-                   compareRule(node.value, newNode.value) {
-                    node.next = newNode
-                    newNode.prev = node
-                    newNode.next = nextNode
-                    nextNode.prev = newNode
-                    break
-                }
-                
-                curr = curr?.next
-            }
         }
     }
     
@@ -211,7 +175,6 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
         
         //hitCount로 정렬
         let newHitCount = newNode.value.hitCount
-        JFLogger.log("[Memory Cache] maxHitCount: \(maxHitCount) / minHitCount: \(minHitCount) / newHitCount: \(newHitCount)")
 
         let distanceFromHead = abs(maxHitCount - newHitCount)
         let distanceFromTail = abs(minHitCount - newHitCount)
@@ -279,7 +242,6 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
     
     @discardableResult
     public func cleanExpiredData() -> Int {
-        JFLogger.log("[Memory Cache] Clean Expired Data")
         var deleteCount: Int = 0
         
         //head, tail 제외
@@ -303,15 +265,5 @@ open class JFMemoryCache<Item: JFCacheItemable>: JFCacheable {
             }
             curr = curr?.next
         }
-    }
-}
-
-extension JFMemoryCache {
-    private func lockThread() {
-        lock.lock()
-    }
-    
-    private func unlockThread() {
-        lock.unlock()
     }
 }

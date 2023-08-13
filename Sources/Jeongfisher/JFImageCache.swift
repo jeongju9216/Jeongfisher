@@ -14,62 +14,57 @@ public struct JFImageData: Codable {
     public var imageExtension: JFImageFormat //png, jpeg (UIImage <-> Data 변환, 압축에 사용)
 }
 
-/*
- note
- - 메모리 전환 정책 : LRU => 최근에 로드한 이미지를 메모리에 남겨둠
- - 앱 시작 시 디스크 캐시에서 메모리 캐시로 올릴 기준
- - 상세 정보 기록만 로드함
- - 키 값은 URL String 그대로 사용
- - 파일 이름이 중복되지 않는다는 확신이 없음
- - URL의 앞부분이 공통된다면 삭제 후 키 값으로 이용하려 했으나,
- - https:// 직후도 다를 수 있는 케이스를 발견하여 URL String 그대로 사용하는 것으로 결정
- */
 /// 이미지를 캐시하는 싱글톤 클래스.
 /// 메모리 캐시, 디스크 캐시를 이용해 캐시 진행
 public class JFImageCache {
+    public typealias ImageCacheItem = JFCacheItem<JFImageData>
+
+    public typealias MemoryCache = JFMemoryCache<ImageCacheItem>
+    public typealias DiskCache = JFDiskCache<ImageCacheItem>
+    
     public static let shared: JFImageCache = JFImageCache()
     
     private init() {
-//        Task {
-//            startCleanCacheTimer()
-//        }
+        Task { startCleanCacheTimer() }
     }
     
-    public enum CacheType {
+    /// JFImageCache에서 아용하는 캐시 타입
+    public enum JFCacheType {
         case memory, disk
+        
+        static public func defaultCache<T>(_ cacheType: Self) -> T {
+            switch cacheType {
+            case .memory: return MemoryCache() as! T
+            case .disk: return DiskCache() as! T
+            }
+        }
     }
     
-    public typealias ImageCacheItem = JFCacheItem<JFImageData>
-    
-    //메모리 캐시 : 딕셔너리, 양방향 링크드 리스트를 이용한 메모리 캐시
-    private var memoryCache: JFMemoryCache<ImageCacheItem> = JFMemoryCache(capacity: .MB(100),
-                                                                       cacheDataSizeLimit: .MB(1),
-                                                                       cachePolicy: .LRU)
-    //메모리 캐시 만료 시간
-    private(set) var memoryCacheItemExpiredTime: JFCacheExpiration = .minutes(10)
-    //메모리 캐시 만료 시간 측정 기준
+    /// 딕셔너리, 양방향 링크드 리스트를 이용한 메모리 캐시
+    private var memoryCache: MemoryCache = JFCacheType.defaultCache(.memory)
+    /// 메모리 캐시 만료 시간
+    private(set) var memoryCacheItemExpiredTime: JFCacheExpiration = .minutes(30)
+    /// 메모리 캐시 만료 시간 측정 기준
     private(set) var memoryCacheItemStandardExpiration: StandardJFCacheExpiration = .lastHit
-    //만료된 메모리 캐시 정리 주기
-    private(set) var cleanMemoryCacheExpiredTime: JFCacheExpiration = .minutes(5)
+    /// 만료된 메모리 캐시 정리 주기
+    private(set) var cleanMemoryCacheExpiredTime: JFCacheExpiration = .minutes(30)
     
-    //디스크 캐시 : FileManager를 이용한 디스크 캐시
-    private var diskCache: JFDiskCache<ImageCacheItem> = JFDiskCache(capacity: .GB(1),
-                                                                 cacheDataSizeLimit: .MB(10),
-                                                                 cacheFolderName: "JeongfisherCache")
-    //디스크 캐시 만료 시간
+    /// FileManager를 이용한 디스크 캐시
+    private var diskCache: DiskCache = JFCacheType.defaultCache(.disk)
+    /// 디스크 캐시 만료 시간
     private(set) var diskCacheItemExpiredTime: JFCacheExpiration = .days(7)
-    //디스크 캐시 만료 시간 측정 기준
+    /// 디스크 캐시 만료 시간 측정 기준
     private(set) var diskCacheItemStandardExpiration: StandardJFCacheExpiration = .create
-    //만료된 디스크 캐시 정리 주기
+    /// 만료된 디스크 캐시 정리 주기
     private(set) var cleanDiskCacheExpiredTime: JFCacheExpiration = .days(7)
     
     private var cleanMemoryCacheCancellable: Cancellable?
     
-    ///캐시를 이용해 이미지 반환
-    ///- Parameters:
-    ///     - url: 이미지 URL
-    ///     - usingETag: ETag 사용 여부
-    ///- Returns: 캐시 혹은 네트워크를 통해 생성한 JeongImageData
+    /// 캐시를 이용해 이미지 반환
+    /// - Parameters:
+    ///   - url: 이미지 URL
+    ///   - usingETag: ETag 사용 여부
+    /// - Returns: 캐시 혹은 네트워크를 통해 생성한 JeongImageData
     public func getImageWithCache(url: URL, usingETag: Bool = false) async -> JFImageData? {
         let key = url.absoluteString
         
@@ -102,30 +97,27 @@ public class JFImageCache {
             return diskCacheData.data
         }
         
+        //네트워크 다운로드
         return await downloadImage(url: url)
     }
     
     ///네트워크를 이용해 이미지 반환
     ///- Parameters:
-    ///     - url: 이미지 URL
+    ///   - url: 이미지 URL
     ///- Returns: 네트워크를 통해 생성한 JeongImageData
     public func downloadImage(url: URL, eTag: String? = nil) async -> JFImageData? {
-        do {
-            //네트워크
-            let imageData: JFImageData = try await JFImageDownloader.shared.downloadImage(from: url, eTag: eTag)
-            JFImageCache.shared.saveImageData(url: url.absoluteString, imageData: imageData)
-                        
-            return imageData
-        } catch {
-            return nil
+        let imageData = try? await JFImageDownloader.shared.downloadImage(from: url, eTag: eTag)
+        if imageData != nil {
+            JFImageCache.shared.saveImageData(url: url.absoluteString, imageData: imageData!)
         }
+                    
+        return imageData
     }
-
     
     ///캐시에 이미지 데이터 저장
     ///- Parameters:
-    ///     - url: Key로 사용될 이미지 URL
-    ///     - imageData
+    ///   - url: Key로 사용될 이미지 URL
+    ///   - imageData: 저장할 JFImageData
     ///- Returns: 캐시 혹은 네트워크를 통해 생성한 JeongImageData
     public func saveImageData(url: String, imageData: JFImageData) {
         saveMemoryCache(key: url, data: imageData)
@@ -134,24 +126,26 @@ public class JFImageCache {
     
     ///JeongImageCache의 메모리 캐시 설정
     ///- Parameters:
-    ///     - new: JeongImageCache에서 사용할 JeongMemoryCache 객체
+    ///   - new: JeongImageCache에서 사용할 JeongMemoryCache 객체
     public func changeMemoryCache(_ new: JFMemoryCache<ImageCacheItem>) {
-        self.memoryCache = new
+        memoryCache = new
     }
     
     ///JeongImageCache의 디스크 캐시 설정
     ///- Parameters:
-    ///     - new: JeongImageCache에서 사용할 JeongDiskCache 객체
+    ///   - new: JeongImageCache에서 사용할 JeongDiskCache 객체
     public func changeDiskCache(_ new: JFDiskCache<ImageCacheItem>) {
-        self.diskCache = new
+        diskCache = new
     }
     
-    ///캐시 아이템의 만료 시간 설정
-    ///- Parameters:
-    ///     - cacheExpiredTime: 만료 시간
-    ///     - cacheType: memory or disk
-    public func updateCacheItemExpiredTime(_ cacheExpiredTime: JFCacheExpiration,
-                                           cacheType: CacheType) {
+    /// 캐시 아이템의 만료 시간 설정
+    /// - Parameters:
+    ///   - cacheExpiredTime: 만료 시간
+    ///   - cacheType: 업데이트할 캐시 타입
+    public func updateCacheItemExpiredTime(
+        _ cacheExpiredTime: JFCacheExpiration,
+        cacheType: JFCacheType)
+    {
         switch cacheType {
         case .memory:
             self.memoryCacheItemExpiredTime = cacheExpiredTime
@@ -160,12 +154,14 @@ public class JFImageCache {
         }
     }
     
-    ///캐시 아이템의 만료 시간 측정 기준 설정
-    ///- Parameters:
-    ///     - standardExpiration: 만료 시간 측정 기준
-    ///     - cacheType: memory or disk
-    public func updateCacheItemStandardExpiration(_ standardExpiration: StandardJFCacheExpiration,
-                                                  cacheType: CacheType) {
+    /// 캐시 아이템의 만료 시간 측정 기준 설정
+    /// - Parameters:
+    ///   - standardExpiration: 만료 시간 측정 기준
+    ///   - cacheType: 업데이트할 캐시 타입
+    public func updateCacheItemStandardExpiration(
+        _ standardExpiration: StandardJFCacheExpiration,
+        cacheType: JFCacheType)
+    {
         switch cacheType {
         case .memory:
             self.memoryCacheItemStandardExpiration = standardExpiration
@@ -174,12 +170,14 @@ public class JFImageCache {
         }
     }
     
-    ///JeongImageCache의 주기적인 캐시 정리 시간 설정
-    ///- Parameters:
-    ///     - cleanCacheTime: 캐시 정리 시간
-    ///     - cacheType: memory or disk
-    public func updateCleanCacheTime(cleanCacheTime: JFCacheExpiration,
-                                     cacheType: CacheType) {
+    /// JeongImageCache의 주기적인 캐시 정리 시간 설정
+    /// - Parameters:
+    ///   - cleanCacheTime: 캐시 정리 시간
+    ///   - cacheType: 업데이트할 캐시 타입
+    public func updateCleanCacheTime(
+        cleanCacheTime: JFCacheExpiration,
+        cacheType: JFCacheType)
+    {
         switch cacheType {
         case .memory:
             self.cleanMemoryCacheExpiredTime = cleanCacheTime
@@ -212,7 +210,7 @@ extension JFImageCache {
     }
     
     private func startCleanDiskCacheTimer() {
-        cleanExpiredDiskCacheData()
+//        cleanExpiredDiskCacheData()
         //todo: fix: 마지막 디스크 청소 시간 기준으로 + cleanDiskCacheExpiredTime 변경해야 함
 //        Timer.publish(every: cleanDiskCacheExpiredTime.timeInterval, on: .main, in: .default)
 //            .autoconnect()
@@ -231,15 +229,13 @@ extension JFImageCache {
     private func saveMemoryCache(key: String, data: JFImageData) {
         let dataSize: JFDataSize = .Byte(data.data.count)
         if memoryCache.isLessSizeThanDataSizeLimit(size: dataSize) {
-            let cacheItem: ImageCacheItem = ImageCacheItem(expiration: memoryCacheItemExpiredTime,
-                                                           standardExpiration: memoryCacheItemStandardExpiration,
-                                                           data: data,
-                                                           size: dataSize)
-            do {
-                try self.memoryCache.saveCache(key: key, data: cacheItem)
-            } catch {
-                JFLogger.error("Save Memory Cache Error")
-            }
+            let cacheItem = ImageCacheItem(
+                expiration: memoryCacheItemExpiredTime,
+                standardExpiration: memoryCacheItemStandardExpiration,
+                data: data,
+                size: dataSize)
+            
+            try? self.memoryCache.saveCache(key: key, data: cacheItem)
         } else {
             JFLogger.log("[Memory Cache] Data is Bigger than data size limit")
         }
@@ -257,14 +253,16 @@ extension JFImageCache {
     private func saveDiskCache(key: String, data: JFImageData) {
         let dataSize: JFDataSize = .Byte(data.data.count)
         if diskCache.isLessSizeThanDataSizeLimit(size: dataSize) {
-            let cacheItem: ImageCacheItem = ImageCacheItem(expiration: diskCacheItemExpiredTime,
-                                                           standardExpiration: diskCacheItemStandardExpiration,
-                                                           data: data,
-                                                           size: dataSize)
+            let cacheItem = ImageCacheItem(
+                expiration: diskCacheItemExpiredTime,
+                standardExpiration: diskCacheItemStandardExpiration,
+                data: data,
+                size: dataSize)
+            
             do {
                 try self.diskCache.saveCache(key: key, data: cacheItem)
             } catch {
-                JFLogger.error("Save Disk Cache Error")
+                JFLogger.error(error.localizedDescription)
             }
         } else {
             JFLogger.log("[Disk Cache] Data is Bigger than data size limit")

@@ -15,12 +15,8 @@ extension JeongfisherWrapper where Base: UIImageView {
     
     /// UIImageView가 사용한 URL
     private var downloadUrl: String? {
-        get {
-            getAssociatedObject(base, &JFAssociatedKeys.downloadUrl)
-        }
-        set {
-            setRetainedAssociatedObject(base, &JFAssociatedKeys.downloadUrl, newValue)
-        }
+        get { getAssociatedObject(base, &JFAssociatedKeys.downloadUrl) }
+        set { setRetainedAssociatedObject(base, &JFAssociatedKeys.downloadUrl, newValue) }
     }
     
     /// - Parameters:
@@ -57,7 +53,7 @@ extension JeongfisherWrapper where Base: UIImageView {
         }
     }
     
-    /// url 이미지를 가져오는 메서드
+    /// url 이미지를 가져오는 메서드.
     /// memory cache -> disk cache -> network 순서로 진행됨
     /// - Parameters:
     ///   - url: 이미지 URL

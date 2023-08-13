@@ -7,14 +7,14 @@
 
 import Foundation
 
-///캐시 아이템의 만료 시간
-///- never : 만료 시키지 않음
-///- seconds : TimeInterval초 초과 시 만료
-///- minutes : Int분 초과 시 만료
-///- hourse : Int시 초과 시 만료
-///- days : Int일 초과 시 만료
-///- date : Date를 초과하면 만료
-///- expired : 만료됨
+/// 캐시 아이템의 만료 시간
+/// - never : 만료 시키지 않음
+/// - seconds : TimeInterval초 초과 시 만료
+/// - minutes : Int분 초과 시 만료
+/// - hourse : Int시 초과 시 만료
+/// - days : Int일 초과 시 만료
+/// - date : Date를 초과하면 만료
+/// - expired : 만료됨
 public enum JFCacheExpiration: Codable {
     case never //만료되지 않음
     case seconds(TimeInterval) //TimerInterval초/분/시 초과하면 만료됨
@@ -44,9 +44,9 @@ public enum JFCacheExpiration: Codable {
     }
 }
 
-///캐시 아이템의 만료 시간 측정 기준
-///- create : 캐시 생성일 기준
-///- lastHit : 마지막 Hit 날짜 기준
+/// 캐시 아이템의 만료 시간 측정 기준
+/// - create : 캐시 생성일 기준
+/// - lastHit : 마지막 Hit 날짜 기준
 public enum StandardJFCacheExpiration: Codable { //만료시간 기준
     case create, lastHit
 }
