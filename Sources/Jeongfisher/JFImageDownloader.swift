@@ -7,7 +7,7 @@
 
 import UIKit
 
-public enum JFNetworkError: Error {
+public enum JeongNetworkError: Error {
     case apiError
     case imageDownloadError
     case alreadyExistSessionError
@@ -29,16 +29,10 @@ public final class JFImageDownloader: JFImageDownloadable {
     private var reqeusetSerialQueue = DispatchQueue(label: "com.jeongfisher.reqeusetQueue", attributes: .concurrent)
     
     //이미지 다운로드
-    public func downloadImage(url urlString: String, eTag: String? = nil) async throws -> JFImageData {
+    public func downloadImage(url: URL, eTag: String? = nil) async throws -> JFImageData {
         return try await withCheckedThrowingContinuation { continuation in
-            guard let url = URL(string: urlString) else {
-                continuation.resume(with: .failure(JFNetworkError.urlError))
-                return
-            }
-            
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
-            request.cachePolicy = .useProtocolCachePolicy
             
             if let eTag = eTag {
                 request.addValue(eTag, forHTTPHeaderField: "If-None-Match")
@@ -46,21 +40,21 @@ public final class JFImageDownloader: JFImageDownloadable {
             
             let task: URLSessionDataTask = URLSession.shared.dataTask(with: request) { [weak self] (data, response, error) in
                 guard let self = self else {
-                    self?.removeDictionaryValue(url: urlString)
-                    continuation.resume(with: .failure(JFNetworkError.imageDownloadError))
+                    self?.removeDictionaryValue(key: url.absoluteString)
+                    continuation.resume(with: .failure(JeongNetworkError.apiError))
                     return
                 }
                 
                 if let error = error {
-                    self.removeDictionaryValue(url: urlString)
+                    self.removeDictionaryValue(key: url.absoluteString)
                     continuation.resume(with: .failure(error))
                     return
                 }
                 
                 guard let httpURLResponse = response as? HTTPURLResponse, (200..<400) ~= httpURLResponse.statusCode,
                       let data = data else {
-                    self.removeDictionaryValue(url: urlString)
-                    continuation.resume(with: .failure(JFNetworkError.imageDownloadError))
+                    self.removeDictionaryValue(key: url.absoluteString)
+                    continuation.resume(with: .failure(JeongNetworkError.imageDownloadError))
                     return
                 }
                 
@@ -68,39 +62,40 @@ public final class JFImageDownloader: JFImageDownloadable {
                 
                 let eTag: String = httpURLResponse.allHeaderFields["Etag"] as? String ?? ""
                 //                let eTag: String = "Update Test Etag"
-                let imageFormat: JFImageFormat = urlString.getJFImageFormatFromURLString()
+                let imageFormat: JFImageFormat = url.absoluteString.getJFImageFormatFromURLString()
                 
                 let imageData = JFImageData(data: data, eTag: eTag, imageExtension: imageFormat)
                 
-                self.removeDictionaryValue(url: urlString)
+                self.removeDictionaryValue(key: url.absoluteString)
                 continuation.resume(with: .success(imageData))
             }
             
-            task.resume()
-//            addRequestToDictionary(url: urlString, request: task)
+            addRequestToDictionary(key: url.absoluteString, request: task)
         }
     }
     
     //이미지 다운로드 취소
     public func cancelDownloadImage(url: String) {
-//        reqeusetSerialQueue.sync {
-//            if self.requestDir[url] != nil {
-//                self.requestDir[url]?.cancel()
-//                removeDictionaryValue(url: url)
-//            }
-//        }
+        reqeusetSerialQueue.sync {
+            if self.requestDir[url] != nil {
+                self.requestDir[url]?.cancel()
+                removeDictionaryValue(key: url)
+            }
+        }
     }
 
-    private func addRequestToDictionary(url: String, request: URLSessionDataTask) {
-//        reqeusetSerialQueue.async(flags: .barrier, execute: {
-//            request.resume()
-//            self.requestDir[url] = request
-//        })
+    private func addRequestToDictionary(key: String, request: URLSessionDataTask) {
+        reqeusetSerialQueue.async(flags: .barrier, execute: {
+            if self.requestDir[key] == nil {
+                request.resume()
+                self.requestDir[key] = request
+            }
+        })
     }
 
-    private func removeDictionaryValue(url: String) {
-//        reqeusetSerialQueue.async(flags: .barrier, execute: {
-//            self.requestDir[url] = nil
-//        })
+    private func removeDictionaryValue(key: String) {
+        reqeusetSerialQueue.async(flags: .barrier, execute: {
+            self.requestDir[key] = nil
+        })
     }
 }
