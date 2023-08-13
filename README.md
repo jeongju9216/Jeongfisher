@@ -17,7 +17,7 @@ https://github.com/jeongju9216/Jeongfisher.git
 ```
 # 사용법
 
-## 이미지 캐싱
+## 1. 이미지 캐싱
 
 ### url
 `URL`을 이용해 이미지를 다운로드, 캐싱합니다.  
