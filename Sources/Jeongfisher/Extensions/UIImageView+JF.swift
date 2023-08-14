@@ -29,21 +29,27 @@ extension JeongfisherWrapper where Base: UIImageView {
         with url: URL,
         placeHolder: UIImage? = nil,
         waitPlaceHolderTime: TimeInterval = 1.0,
-        useCache: Bool = true,
-        useETag: Bool = false)
+        options: Set<JFOption> = [])
     {
         Task {
-            let timer: Timer? = createPlaceHolderTimer(placeHolder, waitTime: waitPlaceHolderTime)
-            timer?.fire()
+            var timer: Timer? = nil
+            if placeHolder != nil {
+                timer = createPlaceHolderTimer(placeHolder, waitTime: waitPlaceHolderTime)
+                timer?.fire()
+            }
             
             var mutableSelf = self
             mutableSelf.downloadUrl = url.absoluteString
             
+            
+            let useCache = !options.contains(.forceRefresh)
+            let useETag = options.contains(.eTag)
             let updatedImageData = await fetchImage(with: url, useCache: useCache, useETag: useETag)
             
             timer?.invalidate()
             
-            if let downsampledImage = await updatedImageData?.data.downsampling(to: self.base.frame.size) {
+            if !options.contains(.showOriginalImage),
+               let downsampledImage = await updatedImageData?.data.downsampling(to: self.base.frame.size) {
                 updateImage(downsampledImage)
             } else {
                 updateImage(updatedImageData?.data.convertToImage())
