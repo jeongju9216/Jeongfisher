@@ -74,10 +74,9 @@ public class JFImageCache {
             return memoryCacheData.data
         }
         
-        guard !options.contains(.cacheMemoryOnly) else { return nil }
-        
         //디스크 캐시: 만료된 데이터는 사용하지 않음
-        if let diskCacheData = diskCache.getData(key: key) {
+        if !options.contains(.cacheMemoryOnly),
+           let diskCacheData = diskCache.getData(key: key) {
             JFLogger.log("[ImageCache] Get Disk Cache")
             saveMemoryCache(key: key, data: diskCacheData.data)
             return diskCacheData.data
