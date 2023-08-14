@@ -17,7 +17,7 @@ public enum JFOption {
     case forceRefresh
     /// 다운샘플링을 진행하지 않음
     case showOriginalImage
-    /// eTag를 사용함
+    /// ETag를 체크하지 않음
     case disableETag
 }
 
