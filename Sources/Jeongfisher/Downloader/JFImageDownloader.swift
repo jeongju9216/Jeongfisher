@@ -25,9 +25,9 @@ public final actor JFImageDownloader: JFImageDownloadable {
     /// URL 이미지 다운로드
     /// - Parameters:
     ///   - url: 이미지 URL
-    ///   - eTag: 이미지 eTag
+    ///   - etag: 이미지 ETag
     /// - Returns: 이미지 다운로드 결과
-    public func downloadImage(from url: URL, useETag: Bool = false) async throws -> JFImageData {
+    public func downloadImage(from url: URL, etag: String? = nil) async throws -> JFImageData {
         count[url, default: 0] += 1
         defer {
             if count[url] != nil {
@@ -50,7 +50,7 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
         
         let task = Task {
-            try await download(from: url, useETag: useETag)
+            try await download(from: url, etag: etag)
         }
         
         cache[url] = .inProgress(task)
@@ -65,31 +65,41 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
     }
     
-    public func fetchImage(from url: URL, useETag: Bool = false) async -> UIImage? {
-        return try? await downloadImage(from: url, useETag: useETag).data.convertToImage()
+    public func fetchImage(from url: URL, etag: String? = nil) async -> UIImage? {
+        return try? await downloadImage(from: url, etag: etag).data.convertToImage()
     }
     
     /// URL 이미지 다운로드
     /// - Parameters:
     ///   - url: 이미지 URL
-    ///   - eTag: 이미지 eTag
+    ///   - etag: 이미지 ETag
     /// - Returns: 이미지 다운로드 결과
-    private func download(from url: URL, useETag: Bool = false) async throws -> JFImageData {
+    private func download(from url: URL, etag: String? = nil) async throws -> JFImageData {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         
+        if let etag = etag {
+            request.addValue(etag, forHTTPHeaderField: "If-None-Match")
+        }
+        
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpURLResponse = response as? HTTPURLResponse, (200..<400) ~= httpURLResponse.statusCode else {
+        guard let httpURLResponse = response as? HTTPURLResponse,
+                (200..<400) ~= httpURLResponse.statusCode else {
             throw JFNetworkError.downloadImageError
         }
         
-        let eTag = useETag ? httpURLResponse.allHeaderFields["Etag"] as? String
-                           : nil
-        let imageFormat: JFImageFormat = url.absoluteString.getJFImageFormatFromURLString()
+        let newETag = httpURLResponse.value(forHTTPHeaderField: "Etag")
+        guard newETag != etag else { throw JFNetworkError.notChangedETag }
         
-        let imageData = JFImageData(data: data, eTag: eTag, imageExtension: imageFormat)
-        
-        return imageData
+        switch httpURLResponse.statusCode {
+        case 200..<299:
+            let imageFormat = url.absoluteString.getJFImageFormatFromURLString()
+            return JFImageData(data: data, ETag: newETag, imageExtension: imageFormat)
+        case 304:
+            throw JFNetworkError.notChangedETag
+        default:
+            throw JFNetworkError.downloadImageError
+        }
     }
     
     /// URL 이미지 다운로드 취소

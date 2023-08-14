@@ -10,7 +10,7 @@ import Combine
 
 public struct JFImageData: Codable {
     public var data: Data //이미지 데이터
-    public var eTag: String?
+    public var ETag: String?
     public var imageExtension: JFImageFormat //png, jpeg (UIImage <-> Data 변환, 압축에 사용)
 }
 
@@ -75,17 +75,33 @@ public class JFImageCache {
         }
         
         //디스크 캐시: 만료된 데이터는 사용하지 않음
-        if !options.contains(.cacheMemoryOnly),
-           let diskCacheData = diskCache.getData(key: key) {
-            JFLogger.log("[ImageCache] Get Disk Cache")
-            saveMemoryCache(key: key, data: diskCacheData.data)
-            return diskCacheData.data
+        if !options.contains(.cacheMemoryOnly) {
+            if var diskCacheData = diskCache.getData(key: key) {
+                if !options.contains(.disableETag), let diskDataETag = diskCacheData.data.ETag {
+                    do {
+                        //ETag 확인
+                        if let newImageData = try await downloadImage(url: url, etag: diskDataETag) {
+                            //다르면 디스크 캐시에 새로운 데이터 저장
+                            JFLogger.log("[ImageCache] Get Disk Cache - Update New Data")
+
+                            diskCacheData.data = newImageData
+                            saveDiskCache(key: key, data: diskCacheData.data)
+                        }
+                    } catch JFNetworkError.notChangedETag {
+                        JFLogger.log("[ImageCache] Get Disk Cache - Same Data")
+                    } catch {
+                    }
+                }
+                
+                saveMemoryCache(key: key, data: diskCacheData.data)
+                return diskCacheData.data
+            }
         }
         
         guard !options.contains(.onlyFromCache) else { return nil }
         
         //네트워크 다운로드
-        guard let imageData = await downloadImage(url: url, useETag: options.contains(.eTag)) else {
+        guard let imageData = try? await downloadImage(url: url) else {
             return nil
         }
         
@@ -96,10 +112,10 @@ public class JFImageCache {
     ///네트워크를 이용해 이미지 반환
     ///- Parameters:
     ///   - url: 이미지 URL
-    ///   - useETag: eTag 사용 여부
+    ///   - etag: URL ETag
     ///- Returns: 네트워크를 통해 생성한 JeongImageData
-    public func downloadImage(url: URL, useETag: Bool = false) async -> JFImageData? {
-        return try? await JFImageDownloader.shared.downloadImage(from: url, useETag: useETag)
+    public func downloadImage(url: URL, etag: String? = nil) async throws -> JFImageData? {
+        return try await JFImageDownloader.shared.downloadImage(from: url, etag: etag)
     }
     
     ///캐시에 이미지 데이터 저장

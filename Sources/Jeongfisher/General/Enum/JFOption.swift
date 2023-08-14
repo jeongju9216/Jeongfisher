@@ -18,7 +18,7 @@ public enum JFOption {
     /// 다운샘플링을 진행하지 않음
     case showOriginalImage
     /// eTag를 사용함
-    case eTag
+    case disableETag
 }
 
 extension JFOption: Hashable { }
