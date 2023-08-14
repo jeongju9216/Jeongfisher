@@ -23,39 +23,40 @@ extension JeongfisherWrapper where Base: UIImageView {
     ///   - url: 이미지 URL
     ///   - placeHolder: 다운로드 지연 시 보여줄 placeHolder 이미지
     ///   - waitPlaceHolderTime: placeHolder 대기 시간
-    ///   - useCache: 캐시 사용 여부. false면 네트워크 다운로드
-    ///   - useETag: eTag 사용 여부.
+    ///   - options: 적용할 JFOption들
     public func setImage(
         with url: URL,
         placeHolder: UIImage? = nil,
         waitPlaceHolderTime: TimeInterval = 1.0,
         options: Set<JFOption> = [])
     {
+        var mutableSelf = self
+        mutableSelf.downloadUrl = url.absoluteString
+        defer { mutableSelf.downloadUrl = nil }
+
         Task {
             var timer: Timer? = nil
             if placeHolder != nil {
                 timer = createPlaceHolderTimer(placeHolder, waitTime: waitPlaceHolderTime)
                 timer?.fire()
             }
-            
-            var mutableSelf = self
-            mutableSelf.downloadUrl = url.absoluteString
-            
-            
-            let useCache = !options.contains(.forceRefresh)
-            let useETag = options.contains(.eTag)
-            let updatedImageData = await fetchImage(with: url, useCache: useCache, useETag: useETag)
-            
-            timer?.invalidate()
-            
-            if !options.contains(.showOriginalImage),
-               let downsampledImage = await updatedImageData?.data.downsampling(to: self.base.frame.size) {
-                updateImage(downsampledImage)
-            } else {
-                updateImage(updatedImageData?.data.convertToImage())
+            defer { timer?.invalidate() }
+                        
+            guard let updatedImageData = await fetchImage(with: url, options: options) else {
+                updateImage(nil)
+                return
             }
             
-            mutableSelf.downloadUrl = nil
+            if options.contains(.showOriginalImage) {
+                updateImage(updatedImageData.data.convertToImage())
+                return
+            }
+            
+            if let downsampledImage = await updatedImageData.data.downsampling(to: self.base.frame.size) {
+                updateImage(downsampledImage)
+            } else {
+                updateImage(updatedImageData.data.convertToImage())
+            }
         }
     }
     
@@ -63,16 +64,14 @@ extension JeongfisherWrapper where Base: UIImageView {
     /// memory cache -> disk cache -> network 순서로 진행됨
     /// - Parameters:
     ///   - url: 이미지 URL
-    ///   - useCache: 캐시 사용 여부
-    ///   - useETag: eTag 사용 여부
+    ///   - options: 적용할 JFOption
     /// - Returns: url 처리 결과
-    private func fetchImage(with url: URL, useCache: Bool, useETag: Bool) async -> JFImageData? {
-        if useCache,
-            let jfImageData = await JFImageCache.shared.getImageWithCache(url: url, usingETag: useETag) {
-            return jfImageData
-        } else {
+    private func fetchImage(with url: URL, options: Set<JFOption>) async -> JFImageData? {
+        guard !options.contains(.forceRefresh) else {
             return try? await JFImageDownloader.shared.downloadImage(from: url)
         }
+        
+        return await JFImageCache.shared.getImageWithCache(url: url, options: options)
     }
     
     /// main thread에서 UIImageView 이미지 업데이트

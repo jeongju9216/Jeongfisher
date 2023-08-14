@@ -27,7 +27,7 @@ public final actor JFImageDownloader: JFImageDownloadable {
     ///   - url: 이미지 URL
     ///   - eTag: 이미지 eTag
     /// - Returns: 이미지 다운로드 결과
-    public func downloadImage(from url: URL, eTag: String? = nil) async throws -> JFImageData {
+    public func downloadImage(from url: URL, useETag: Bool = false) async throws -> JFImageData {
         count[url, default: 0] += 1
         defer {
             if count[url] != nil {
@@ -50,7 +50,7 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
         
         let task = Task {
-            try await download(url: url, eTag: eTag)
+            try await download(from: url, useETag: useETag)
         }
         
         cache[url] = .inProgress(task)
@@ -65,8 +65,8 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
     }
     
-    public func downloadImage(from url: URL, eTag: String? = nil) async throws -> UIImage? {
-        return try await downloadImage(from: url, eTag: eTag).data.convertToImage()
+    public func fetchImage(from url: URL, useETag: Bool = false) async -> UIImage? {
+        return try? await downloadImage(from: url, useETag: useETag).data.convertToImage()
     }
     
     /// URL 이미지 다운로드
@@ -74,7 +74,7 @@ public final actor JFImageDownloader: JFImageDownloadable {
     ///   - url: 이미지 URL
     ///   - eTag: 이미지 eTag
     /// - Returns: 이미지 다운로드 결과
-    private func download(url: URL, eTag: String? = nil) async throws -> JFImageData {
+    private func download(from url: URL, useETag: Bool = false) async throws -> JFImageData {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         
@@ -83,9 +83,13 @@ public final actor JFImageDownloader: JFImageDownloadable {
             throw JFNetworkError.downloadImageError
         }
         
-        let eTag = httpURLResponse.allHeaderFields["Etag"] as? String
+        let eTag = useETag ? httpURLResponse.allHeaderFields["Etag"] as? String
+                           : nil
         let imageFormat: JFImageFormat = url.absoluteString.getJFImageFormatFromURLString()
-        return JFImageData(data: data, eTag: eTag, imageExtension: imageFormat)
+        
+        let imageData = JFImageData(data: data, eTag: eTag, imageExtension: imageFormat)
+        
+        return imageData
     }
     
     /// URL 이미지 다운로드 취소
