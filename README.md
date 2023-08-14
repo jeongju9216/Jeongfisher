@@ -46,22 +46,3 @@ imageView.jf.setImage(with: url,
                       placeHolder: placeHolder,
                       waitPlaceHolderTime: 3.0)
 ```
-
-### useCache
-캐시 사용 여부를 설정할 수 있습니다.  
-기본 값은 `true`입니다.  
-`true`인 경우, 메모리 캐시, 디스크 캐시를 사용합니다.  
-`false`인 경우, 네트워크 다운로드만 사용합니다.  
-``` swift
-imageView.jf.setImage(with: url, useCache: true) //메모리 캐시, 디스크 캐시, 네트워크 다운로드 사용
-imageView.jf.setImage(with: url, useCache: false) //네트워크 다운로드만 사용
-```
-
-### useETag
-`eTag` 사용 여부를 설정할 수 있습니다.  
-기본 값은 `false`입니다.  
-서버에서 `eTag`를 지원하는 경우에만 `true`로 설정하세요.  
-``` swift
-imageView.jf.setImage(with: url, useETag: true) //eTag 사용
-imageView.jf.setImage(with: url, useETag: false) //eTag 미사용
-```
