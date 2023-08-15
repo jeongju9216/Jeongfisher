@@ -32,7 +32,6 @@ extension JeongfisherWrapper where Base: UIImageView {
     {
         var mutableSelf = self
         mutableSelf.downloadUrl = url.absoluteString
-        defer { mutableSelf.downloadUrl = nil }
 
         Task {
             var timer: Timer? = nil
