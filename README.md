@@ -23,8 +23,17 @@ https://github.com/jeongju9216/Jeongfisher.git
 ### url
 `URL`을 이용해 이미지를 다운로드, 캐싱합니다.  
 표시할 이미지 `URL`을 전달하세요.  
+`다운샘플링` 이미지를 `UIImageView`에 설정합니다.  
 ``` swift
 imageView.jf.setImage(with: url)
+```
+
+`원본` 이미지를 설정하고 싶다면 `showOriginalImage` 옵션 또는 `setOriginalImage(with:)`를 사용하세요.
+```swift
+posterImageView.jf.setImage(with: url, options: [.showOriginalImage])
+```
+```swift
+posterImageView.jf.setOriginalImage(with: url)
 ```
 
 ### placeholder
@@ -46,3 +55,18 @@ imageView.jf.setImage(with: url,
                       placeHolder: placeHolder,
                       waitPlaceHolderTime: 3.0)
 ```
+
+### options
+이미지 설정에 부가적인 옵선을 설정할 수 있습니다.  
+- cacheMemoryOnly
+  - 메모리 캐시만 사용하고, 디스크 캐시를 사용하지 않습니다.
+- onlyFromCache
+  - 캐시 데이터만 사용합니다.
+  - 캐시에 없어도 네트워킹을 하지 않습니다.
+- forceRefresh
+  - 항상 네트워킹을 합니다.
+  - 캐시를 사용하지 않습니다.
+- showOriginalImage
+  - 다운샘플링을 하지 않습니다.
+- disableETag
+  - ETag를 확인하지 않습니다.
