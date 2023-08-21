@@ -89,7 +89,9 @@ public final actor JFImageDownloader: JFImageDownloadable {
         }
         
         let newETag = httpURLResponse.value(forHTTPHeaderField: "Etag")
-        guard newETag != etag else { throw JFNetworkError.notChangedETag }
+        if etag != nil && newETag == etag {
+            throw JFNetworkError.notChangedETag
+        }
         
         switch httpURLResponse.statusCode {
         case 200..<299:
