@@ -19,6 +19,7 @@ extension JeongfisherWrapper where Base: UIImageView {
         set { setRetainedAssociatedObject(base, &JFAssociatedKeys.downloadUrl, newValue) }
     }
     
+    /// URL을 이용해 Downsampling 이미지 설정
     /// - Parameters:
     ///   - url: 이미지 URL
     ///   - placeHolder: 다운로드 지연 시 보여줄 placeHolder 이미지
@@ -57,6 +58,26 @@ extension JeongfisherWrapper where Base: UIImageView {
                 updateImage(updatedImageData.data.convertToImage())
             }
         }
+    }
+    
+    /// URL을 이용해 원본 이미지 설정
+    /// - Parameters:
+    ///   - url: 이미지 URL
+    ///   - placeHolder: 다운로드 지연 시 보여줄 placeHolder 이미지
+    ///   - waitPlaceHolderTime: placeHolder 대기 시간
+    ///   - options: 적용할 JFOption들
+    public func setOriginalImage(
+        with url: URL,
+        placeHolder: UIImage? = nil,
+        waitPlaceHolderTime: TimeInterval = 1.0,
+        options: Set<JFOption> = [])
+    {
+        var options = options
+        options.insert(.showOriginalImage)
+        setImage(with: url,
+                 placeHolder: placeHolder,
+                 waitPlaceHolderTime: waitPlaceHolderTime,
+                 options: options)
     }
     
     /// url 이미지를 가져오는 메서드.
