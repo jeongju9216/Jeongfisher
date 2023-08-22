@@ -213,7 +213,22 @@ https://jeong9216.tistory.com/672
   - Enum 연관값으로 Task를 전달
   - 딕셔너리로 Enum을 관리
   - Enum 케이스를 변경하여 완료 처리
+    ``` swift
+      let jfImageData = try await task.value
+      cache[url] = .complete(jfImageData)
+      ```
   - 중복 Request가 들어왔다면, Task의 value를 대기하고 완료되면 전달
+    ``` swift
+      //이미 같은 URL 요청이 들어온 경우 Task 완료 대기
+      if let cached = cache[url] {
+          switch cached {
+          case .inProgress(let task):
+              return try await task.value
+          case .complete(let jfImageData):
+              return jfImageData
+          }
+      }
+      ```
  
 ### 개선 후 느낀 점
 - 동일한 Request가 들어오면 첫 번째 Request 결과를 대기했다가 반환할 수 있게 됨
