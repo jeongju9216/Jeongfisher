@@ -244,6 +244,7 @@ https://jeong9216.tistory.com/672
 
 ### 관련 포스팅
 https://jeong9216.tistory.com/667
+https://jeong9216.tistory.com/673#적용-이유
 
 ### 적용 이유
 - `Extension Wrapper` 적용 전에는 `UIImageView` extension에 메서드를 추가함
@@ -260,3 +261,5 @@ https://jeong9216.tistory.com/667
 
 </div>
 </details>
+
+
