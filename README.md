@@ -243,7 +243,7 @@ https://jeong9216.tistory.com/672
 <div markdown="1">      
 
 ### 관련 포스팅
-https://jeong9216.tistory.com/667
+https://jeong9216.tistory.com/667  
 https://jeong9216.tistory.com/673#적용-이유
 
 ### 적용 이유
@@ -262,4 +262,79 @@ https://jeong9216.tistory.com/673#적용-이유
 </div>
 </details>
 
+<details>
+<summary>cancelDownloadImage 구현</summary>
+<div markdown="1">      
 
+### 관련 포스팅
+https://jeong9216.tistory.com/673#canceldownloadimage-구현
+
+### 발생한 문제
+- cancelDownloadImage는 Task를 중간에 취소하는 메서드
+- 다운로드 중에 CollectionViewCell이 안 보이게 됐을 때 Task를 취소해서 메모리 효율을 높이는 용도로 사용됨
+- 처음에는 URL을 전달하여 구현했지만, URL 데이터 의존성 때문에 cancel 메서드 호출이 자유롭지 못함
+- 킹피셔도 따로 URL을 전달하지 않으니 개선하기로 결정
+
+### 해결 방법
+- Extension에는 저장 프로퍼티를 저장할 수 없기 때문에 고전함
+- Objective-C 기능인 objc_getAssociatedObject과 objc_setAssociatedObject로 해결함
+  ``` swift
+  /// UIImageView가 사용한 URL
+  private var downloadUrl: String? {
+      get { getAssociatedObject(base, &JFAssociatedKeys.downloadUrl) }
+      set { setRetainedAssociatedObject(base, &JFAssociatedKeys.downloadUrl, newValue) }
+  }
+  
+  ...
+  
+  func getAssociatedObject<T>(_ object: Any, _ key: UnsafeRawPointer) -> T? {
+      return objc_getAssociatedObject(object, key) as? T
+  }
+  
+  func setRetainedAssociatedObject<T>(_ object: Any, _ key: UnsafeRawPointer, _ value: T) {
+      objc_setAssociatedObject(object, key, value, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+  }
+  ```
+- Swift로만 해결 가능한 방법이 생기면 꼭 개선할 것이라 다짐함
+
+</div>
+</details>
+
+
+<details>
+<summary>JFOption 적용</summary>
+<div markdown="1">      
+
+### 관련 포스팅
+https://jeong9216.tistory.com/673#jfoption%C2%A0구현
+
+### 발생한 문제
+- `setImage`를 할 때 필요한 옵션을 전달할 수 있음
+- 기존에는 옵션 하나하나를 메서드 파라미터로 전달함
+  ``` swift
+  public func setImage(url: String,
+                        placeHolder: UIImage? = nil,
+                        waitPlaceHolderTime: TimeInterval = 1,
+                        useCache: Bool = true)
+  ```
+- 옵션이 추가될 때마다 수정 범위가 커서 `확장성`이 낮은 구조라는 걸 꺠달음
+
+### 해결 방법
+- 옵션을 `JFOption` Enum으로 묶어서 관리함
+- `setImage` 메서드 파라미터로 `Set<JFOption>`을 전달해서 확장성을 개선함
+  - 옵션의 중복을 없애기 위해 `Set`을 선택
+  ``` swift
+  public func setImage(
+          with url: URL,
+          placeHolder: UIImage? = nil,
+          waitPlaceHolderTime: TimeInterval = 1.0,
+          options: Set<JFOption> = [])
+  ```
+
+### 개선 후 느낀 점
+- 기존에는 옵션이 추가될 때마다 메서드가 사용되는 모든 곳을 바꿔야 했음
+- 개선 후에는 `JFOption` Enum과 기능 구현만 해주면 되서 확장성이 개선됨
+- 다른 메서드로 옵션을 전달할 때 편리해짐
+
+</div>
+</details>
