@@ -238,3 +238,25 @@ https://jeong9216.tistory.com/672
 </div>
 </details>
 
+<details>
+<summary>⭐️ Extension Wrapper</summary>
+<div markdown="1">      
+
+### 관련 포스팅
+https://jeong9216.tistory.com/667
+
+### 적용 이유
+- `Extension Wrapper` 적용 전에는 `UIImageView` extension에 메서드를 추가함
+- 메서드가 늘어나면서 문제가 발생
+  - `UIImageView`의 역할이 커짐
+  - `Jeongfisher` 기능이 필요 없는 `UIImageView`에서도 `Jeongfisher` 메서드가 노출됨
+- 킹피셔는 `kf`로 킹피셔 메서드를 사용하는 것을 보고 `Extension Wrapper` 적용을 결심함
+
+### 적용 결과
+- `Jeongfisher`와 `UIImageView` 역할이 분리되었음
+- `Jeongfisher`의 확장, 수정이 `UIImageView`에 영향을 주지 않게 됨
+- `Jeongfisher` 기능만 테스트하기 수월해짐
+- 대형 라이브러리 오픈소스를 읽으면서 배울 점이 많다는 것을 느낌
+
+</div>
+</details>
