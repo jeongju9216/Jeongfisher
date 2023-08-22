@@ -81,10 +81,10 @@ imageView.jf.setImage(with: url,
 
 # 기술적 고민
 <details>
-<summary>다운샘플링 적용</summary>
+<summary>⭐️ 다운샘플링 적용</summary>
 <div markdown="1">       
 
-### 관련 블로그 포스팅
+### 관련 블로그 포스팅 (추천)
 https://jeong9216.tistory.com/670
 
 ### 적용 이유
@@ -137,18 +137,18 @@ https://jeong9216.tistory.com/670
 https://jeong9216.tistory.com/671#자료구조-선택
 
 ### 배열과 링크드 리스트
-- 배열은 원소 재배치 오버헤드가 발생함
-- Hit 데이터를 맨 앞으로 이동시키기 때문에 배열은 비효율적 (LRU 기준)
+- `배열`은 `원소 재배치 오버헤드`가 발생함
+- Hit 데이터를 맨 앞으로 이동시키기 때문에 `배열`은 비효율적 (LRU 기준)
   - Hit 데이터를 맨 뒤로 보내도 동일함
-  - 뒤에 넣는 경우에는 cost가 부족해졌을 때 앞의 원소를 삭제하므로 원소 재배치 오버헤드가 발생함
-- 이 문제를 해결하기 위해 링크드 리스트로 구현
-  - 원소 삭제를 효율적으로 하기 위해 양방향 링크드 리스트로 구현함
+  - 뒤에 넣는 경우에는 cost가 부족해졌을 때 앞의 원소를 삭제하므로 `원소 재배치 오버헤드`가 발생함
+- 이 문제를 해결하기 위해 `링크드 리스트`로 구현
+  - 원소 삭제를 효율적으로 하기 위해 `양방향 링크드 리스트`로 구현함
   - tail을 이용해 맨 뒤 원소에 바로 접근할 수 있어서 효율적임
 
 ### 딕셔너리(Dictionary)
-- 링크드 리스트의 느린 탐색 단점을 해소하기 위해 도입함
+- `링크드 리스트`의 `느린 탐색` 단점을 해소하기 위해 도입함
   - 메모리 캐시는 데이터를 빠르게 읽어야 하기 때문에 느린 탐색은 치명적인 단점
-- 딕셔너리를 사용하여 getData를 상수 시간복잡도로 완료함
+- `딕셔너리`를 사용하여 상수 시간복잡도로 데이터를 읽을 수 있음
 
 </div>
 </details>
@@ -161,18 +161,18 @@ https://jeong9216.tistory.com/671#자료구조-선택
 https://jeong9216.tistory.com/671#동시성-문제
 
 ### 딕셔너리의 동시성 문제 해결
-- 딕셔너리는 Thread safe 하지 않음
+- `딕셔너리`는 Thread safe 하지 않음
   - 같은 키에 여러 thread가 동시에 접근하면 런타임 에러가 발생
 - 이를 해결하기 위해 두 가지 방법을 고민함
  
-- DispatchQueue barrier (기각)
-  - 리턴이 있는 메서드에서 completionHandler를 사용해야 함
+- `DispatchQueue barrier` (기각)
+  - 리턴이 있는 메서드에서 `completionHandler`를 사용해야 함
   - 리턴이 있는 메서드가 많았기 때문에 코드 복잡도가 높아질 것이라 판단하여 기각
  
-- NSLock (채택)
-  - 간단하면서 강력한 Lock을 지원하여 채택
-  - 처음에는 lock 효율을 위해 좁은 범위로 lock과 unlock을 수행함
-  - "lock은 안정성이 최우선이다"라는 리뷰를 받고 defer를 활용해 메서드 단위로 lock을 수행함
+- `NSLock` (채택)
+  - 간단하면서 강력한 Lock을 지원
+  - 처음에는 lock 효율을 위해 `좁은 범위`로 lock과 unlock을 수행함
+  - "lock은 `안정성`이 최우선이다"라는 리뷰를 받고 `defer`를 활용해 메서드 단위로 lock을 수행함
 
 </div>
 </details>
@@ -184,10 +184,42 @@ https://jeong9216.tistory.com/671#동시성-문제
 ### 관련 포스팅
 https://jeong9216.tistory.com/671#디스크-캐시
 
-- "디스크 캐시의 장점을 극대화하려면 어떻게 해야할까?" 고민함
-- ETag를 활용하여 장기간 보관 개선
-- ETag가 동일하다면 만료일을 갱신해서 캐시 데이터 보관 기간을 늘림
-- ETag를 지원하지 않거나 사용하지 않고 싶다면 옵션으로 비활성할 수도 있음
+- 디스크 캐시의 `장기 보관` 특징을 극대화할 수 있는 방법을 고민함
+- `ETag`를 활용하여 `장기 보관` 개선
+- `ETag`가 동일하다면 `만료일을 갱신`해서 캐시 데이터 보관 기간을 늘림
+- `ETag`를 지원하지 않거나 사용하지 않고 싶다면 옵션으로 비활성할 수도 있음
 
 </div>
 </details>
+
+<details>
+<summary>⭐️ JFImageDownloader 구현</summary>
+<div markdown="1">      
+
+### 관련 포스팅 (추천)
+https://jeong9216.tistory.com/672
+
+### 발생한 문제
+- `중복 Request`를 처리하는 과정에서 문제가 있었음
+  - 동일한 URL이 동시에 Request가 되면 첫 번째 Request만 처리됨
+  - 예를 들어, 10개의 UIImageView가 동일한 URL을 Request 하면 1번 UIImageView에만 이미지가 설정되고 나머지 UIImageView에는 이미지 설정이 되지 않음
+- `딕셔너리` 동시성 문제를 `DispatchQueue`로 해결해서 코드 복잡성이 증가함
+
+### 해결 방법
+- `actor`, `Task`, `Enum`, `async/await`을 활용하여 해결함
+- `actor`는 동시성 문제르 해결하기 위해 적용
+  - DispatchQueue를 없애면서 코드 가독성을 개선함
+- `Task`와 `Enum`은 `중복 Request`를 처리하기 위해 적용
+  - Enum 연관값으로 Task를 전달
+  - 딕셔너리로 Enum을 관리
+  - Enum 케이스를 변경하여 완료 처리
+  - 중복 Request가 들어왔다면, Task의 value를 대기하고 완료되면 전달
+ 
+### 개선 후 느낀 점
+- 동일한 Request가 들어오면 첫 번째 Request 결과를 대기했다가 반환할 수 있게 됨
+- `Swift Concurrency`가 코드 가독성에 큰 기여를 한다는 것을 다시 한 번 느낌
+- `actor`가 처음에는 너무 어려웠지만, 직접 사용해보니 편하게 동시성 문제를 해결할 수 있다는 것을 배움
+
+</div>
+</details>
+
