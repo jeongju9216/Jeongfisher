@@ -70,3 +70,47 @@ imageView.jf.setImage(with: url,
   - 다운샘플링을 하지 않습니다.
 - disableETag
   - ETag를 확인하지 않습니다.
+
+# 기술적 고민
+## 다운샘플링 적용
+### 적용 이유
+- `Jeongfisher`는 썸네일처럼 작은 이미지를 보여주는 용도로 적합함
+- `Downsampling`을 기본으로 적용하여 `메모리 효율 증가` 효과를 기대함
+
+### 적용 방법
+- WWDC18 - Image and Graphics Best Practices에서 소개된 방법을 사용함
+
+### 다운샘플링과 원본 성능 비교
+- XCTest에서 `XCTClockMetric`, `XCTMemoryMetric`, `XCTCPUMetric` 옵션으로 성능을 측정함
+- 1000x1000 이미지 설정을 100번 수행함
+
+### 성능 비교 결과
+
+`Clock Monotonic Time`
+- 둘 다 0.00으로 동일
+- <img width="1361" alt="ClockMonotonicTime" src="https://github.com/jeongju9216/Jeongfisher/assets/89075274/8cc0cbe4-910a-4897-8695-93b92049f3af">
+
+`메모리 사용량`
+- `다운샘플링`이 `8배` 낮았음
+- 왼쪽이 다운샘플링, 오른쪽이 원본 이미지
+- <img width="241" alt="다운샘플링 메모리" src="https://github.com/jeongju9216/Jeongfisher/assets/89075274/3f9a18ec-ee16-4d53-8b7f-5704941ed553"> <img width="237" alt="원본 메모리" src="https://github.com/jeongju9216/Jeongfisher/assets/89075274/b0737be8-6e00-4d67-82f2-8053079f2876">  
+
+`Memory Peak Physical`
+- `다운샘플링`이 `3MB` 더 낮았음
+- <img width="1356" alt="Memory Peak Physical" src="https://github.com/jeongju9216/Jeongfisher/assets/89075274/21e974d4-e0eb-4853-a5d7-57faf2d5560c">
+
+`Memory Physical`
+- `다운샘플링`이 `3.113 kB`로 약 `4배` 더 낮았음
+- <img width="1357" alt="Memory Physical" src="https://github.com/jeongju9216/Jeongfisher/assets/89075274/7bbdcb06-31b7-4cef-9c38-1c0e0ce5d0cc">
+
+`CPU(CPU Cycles, CPU Instructions Retired, CPU Time)`
+- 둘이 같았음
+
+### 성능 비교 결론
+- 메모리 측면에서 다운샘플링이 압도적으로 유리하고, 이외의 측면에서는 큰 차이는 없었음
+- 다운샘플링 이미지는 화질 저하가 있으므로 UIImageView 크기가 커지면 원본 이미지 설정이 필요함
+- 원본 이미지가 필요하면 `showOriginalImage` 옵션이나 `setOriginalImage` 메서드를 사용하면 되기 때문에 다운샘플링 적용은 좋은 결정이었다고 생각함
+
+
+
+
