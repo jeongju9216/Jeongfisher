@@ -52,8 +52,14 @@ extension JeongfisherWrapper where Base: UIImageView {
                 return
             }
             
+            var downsamplingScale: CGFloat = 1.0
+            for case let .downsamplingScale(scale) in options {
+                downsamplingScale = scale
+            }
             
-            if let downsampledImage = await updatedImageData.data.downsampling(to: self.base.frame.size) {
+            if let downsampledImage = await updatedImageData
+                .data
+                .downsampling(to: self.base.frame.size, scale: downsamplingScale) {
                 updateImage(downsampledImage)
             } else {
                 updateImage(updatedImageData.data.convertToImage())
