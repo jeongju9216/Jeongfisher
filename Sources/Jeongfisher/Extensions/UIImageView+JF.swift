@@ -29,7 +29,7 @@ extension JeongfisherWrapper where Base: UIImageView {
         with url: URL,
         placeHolder: UIImage? = nil,
         waitPlaceHolderTime: TimeInterval = 1.0,
-        options: Set<JFOption> = [])
+        options: Set<JFOption> = [.downsamplingScale(1.0)])
     {
         var mutableSelf = self
         mutableSelf.downloadUrl = url.absoluteString
@@ -52,6 +52,7 @@ extension JeongfisherWrapper where Base: UIImageView {
                 return
             }
             
+            
             if let downsampledImage = await updatedImageData.data.downsampling(to: self.base.frame.size) {
                 updateImage(downsampledImage)
             } else {
@@ -70,10 +71,8 @@ extension JeongfisherWrapper where Base: UIImageView {
         with url: URL,
         placeHolder: UIImage? = nil,
         waitPlaceHolderTime: TimeInterval = 1.0,
-        options: Set<JFOption> = [])
+        options: Set<JFOption> = [.showOriginalImage])
     {
-        var options = options
-        options.insert(.showOriginalImage)
         setImage(with: url,
                  placeHolder: placeHolder,
                  waitPlaceHolderTime: waitPlaceHolderTime,

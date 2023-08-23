@@ -19,6 +19,8 @@ public enum JFOption {
     case showOriginalImage
     /// ETag를 체크하지 않음
     case disableETag
+    /// 다운샘플링 이미지 비율 설정
+    case downsamplingScale(CGFloat)
 }
 
 extension JFOption: Hashable { }
