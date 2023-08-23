@@ -57,6 +57,11 @@ imageView.jf.setImage(with: url,
 
 ### options
 이미지 설정에 부가적인 옵선을 설정할 수 있습니다.  
+e.g.
+``` swift
+imageView.jf.setImage(with: url, options: [.cacheMemoryOnly])
+```
+
 <details>
 <summary>옵션 목록</summary>
 <div markdown="1">       
@@ -73,7 +78,8 @@ imageView.jf.setImage(with: url,
   - 다운샘플링을 하지 않습니다.
 - disableETag
   - ETag를 확인하지 않습니다.
- 
+- downsamplingScale(CGFloat)
+  - 다운샘플링 비율 설정. e.g. 1.0(ImageView와 같은 Size), 1.5(ImageView의 1.5배 Size)
 </div>
 </details>
 
