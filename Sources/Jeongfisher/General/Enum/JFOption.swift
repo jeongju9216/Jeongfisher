@@ -19,7 +19,8 @@ public enum JFOption {
     case showOriginalImage
     /// ETag를 체크하지 않음
     case disableETag
-    /// 다운샘플링 이미지 비율 설정
+    /// 다운샘플링 비율 설정
+    /// e.g. 1.0(ImageView와 같은 Size), 1.5(ImageView의 1.5배 Size)
     case downsamplingScale(CGFloat)
 }
 
